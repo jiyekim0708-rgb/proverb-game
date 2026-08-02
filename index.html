@@ -85,11 +85,11 @@
         .timer-danger { animation: pulse-red 1s infinite; color: #ff9f43 !important; }
 
         #flashyMatchPopup { pointer-events: none; }
-        #flashyMatchPopup.active .popup-text { animation: smooth-pop 4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        #flashyMatchPopup.active .popup-text { animation: smooth-pop 2s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes smooth-pop {
             0% { transform: scale(0.5); opacity: 0; }
-            10% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 40px #ff9f43, 0 0 80px #f368e0; }
-            85% { transform: scale(1); opacity: 1; text-shadow: 0 0 20px #ff9f43; }
+            15% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 40px #ff9f43, 0 0 80px #f368e0; }
+            80% { transform: scale(1); opacity: 1; text-shadow: 0 0 20px #ff9f43; }
             100% { transform: scale(1.2); opacity: 0; }
         }
 
@@ -276,7 +276,7 @@
         </div>
     </div>
 
-    <!-- 10초 학습 모달창 -->
+    <!-- 학습 모달창 -->
     <div id="studyModal" class="absolute inset-0 bg-black/90 flex items-center justify-center z-50 hidden backdrop-blur-sm">
         <div class="bg-gradient-to-br from-indigo-900 to-purple-900 p-8 rounded-3xl max-w-lg w-full border-4 border-fuchsia-500 text-center shadow-[0_0_50px_rgba(217,70,239,0.5)] relative">
             <div class="text-5xl mb-4 animate-bounce">📜</div>
@@ -286,13 +286,13 @@
                 <p id="modalMeaning" class="text-gray-100 font-bold text-lg mb-2 leading-relaxed">뜻 내용...</p>
             </div>
             <div class="flex items-center justify-between">
-                <span class="text-sm font-bold text-fuchsia-400 animate-pulse bg-black/60 px-3 py-1 rounded-full"><span id="modalTimer">10</span>초 뒤 닫힘</span>
+                <span class="text-sm font-bold text-fuchsia-400 animate-pulse bg-black/60 px-3 py-1 rounded-full"><span id="modalTimer">5</span>초 뒤 닫힘</span>
                 <button onclick="closeStudyModal()" class="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white px-6 py-3 rounded-xl font-bold text-lg shadow-[0_0_15px_rgba(217,70,239,0.5)] transition">[다 읽었어요!]</button>
             </div>
         </div>
     </div>
 
-    <!-- 승패 결과 / 피날레 퀴즈 모달 -->
+    <!-- 승패 결과 모달 -->
     <div id="finaleModal" class="absolute inset-0 bg-black/95 flex items-center justify-center z-50 hidden backdrop-blur-sm">
         <div class="bg-gradient-to-br from-yellow-900 to-orange-900 p-8 rounded-3xl max-w-xl w-full border-4 border-yellow-400 text-center shadow-[0_0_50px_rgba(250,204,21,0.5)]">
             <div id="resultEmoji" class="text-7xl mb-4">👑</div>
@@ -455,8 +455,10 @@
         let selectedTierStake = 100;
         let myName = "";
         let isMultiplayer = false;
+        
         let myTurn = true;
         let isStudying = false; 
+        let isAnimating = false; // 턴 잠금 변수 명시적 초기화
 
         // Firebase Multi DB
         let currentRoomId = null;
@@ -532,7 +534,6 @@
                 window.deleteDoc(window.doc(window.db, "rooms", currentRoomId)).catch(e=>console.log(e));
             }
             
-            // 초기화
             document.getElementById("gameScreen").classList.add("hidden");
             document.getElementById("finaleModal").classList.add("hidden");
             document.getElementById("mainBody").classList.add("bg-lobby");
@@ -540,13 +541,13 @@
             document.getElementById("myCollectionArea").innerHTML = `<p class="text-gray-400 ml-2">비어있음</p>`;
             document.getElementById("oppCollectionArea").innerHTML = `<p class="text-gray-400 ml-2">비어있음</p>`;
             
-            // UI 상태 초기화
             myScore = 0; oppScore = 0;
             document.getElementById("myScore").innerText = "0";
             document.getElementById("oppScore").innerText = "0";
             document.getElementById("deckCount").innerText = `남은 패: 0`;
             
             usedMagnifier = false; usedFan = false;
+            isAnimating = false;
             document.getElementById(`btnMagnifier`).classList.remove("opacity-40");
             document.getElementById(`btnFan`).classList.remove("opacity-40");
             loadUserMoney();
@@ -570,12 +571,12 @@
                 const snap = await window.getDocs(q);
                 if(!snap.empty) {
                     const roomDoc = snap.docs[0]; currentRoomId = roomDoc.id;
-                    isHost = false; myTurn = false;
+                    isHost = false; myTurn = false; isAnimating = false;
                     await window.updateDoc(window.doc(window.db, "rooms", currentRoomId), { guestName: myName, status: "playing" });
                     document.getElementById("oppName").innerText = roomDoc.data().hostName;
                     statusEl.classList.add("hidden"); startGameUI(); listenToRoom();
                 } else {
-                    isHost = true; myTurn = true;
+                    isHost = true; myTurn = true; isAnimating = false;
                     const newRoom = await window.addDoc(roomsRef, {
                         hostName: myName, guestName: "", status: "waiting", turn: "host",
                         board: [], hostHand: [], guestHand: [], deckHand: [], deckBoard: [],
@@ -613,7 +614,7 @@
                     }
 
                     renderGame();
-                    if(!isStudying) {
+                    if(!isStudying && !isAnimating) {
                         if(checkGameEnd()) return;
                         startTimer();
                     }
@@ -640,12 +641,13 @@
             myTurn = false;
             renderGame();
             startTimer();
-            setTimeout(playAI, 1500); // 1.5초 후 조선비 출격
+            setTimeout(playAI, 1000); // 1초 뒤 조선비 플레이 실행
         }
 
         function endAITurnAI() {
             if(checkGameEnd()) return;
             myTurn = true;
+            isAnimating = false; // 내 턴 복귀 시 애니메이션 잠금 해제
             renderGame();
             startTimer();
         }
@@ -658,7 +660,8 @@
         }
 
         function startAIGame() {
-            playSound('select'); isMultiplayer = false; isHost = true; myTurn = true;
+            playSound('select'); 
+            isMultiplayer = false; isHost = true; myTurn = true; isAnimating = false;
             document.getElementById("oppName").innerText = "조선비 (AI)";
             startGameUI();
             setupNewGameData();
@@ -680,7 +683,6 @@
             if(isMultiplayer && isHost) syncFirebaseState();
         }
 
-        // 바닥 중복패 차단 + 타겟 손패 매칭 보장
         function fillUniqueBoard(targetHand) {
             while(board.length < 8 && deckBoard.length > 0) {
                 let uniqueIdx = deckBoard.findIndex(dc => !board.some(bc => bc.id === dc.id));
@@ -725,15 +727,17 @@
         }
 
         function selectMyCard(idx) {
-            if(!myTurn || isStudying) { showToast("차례를 기다리세요!"); return; }
+            if(!myTurn || isStudying || isAnimating) { showToast("잠시만 기다려주세요!"); return; }
             playSound('select'); selectedHandIndex = (selectedHandIndex === idx) ? null : idx; renderGame();
         }
 
         function playCard(boardIdx) {
-            if(!myTurn || isStudying) return;
+            if(!myTurn || isStudying || isAnimating) return;
             if(selectedHandIndex === null) { showToast("먼저 낼 앞구절 패를 고르세요!"); return; }
 
             clearInterval(timerInterval);
+            isAnimating = true; 
+
             const handCard = myHand[selectedHandIndex]; const boardCard = board[boardIdx];
 
             if(handCard.id === boardCard.id) {
@@ -748,16 +752,24 @@
                 
                 setTimeout(() => {
                     openStudyModal(handCard, () => {
-                        if(isMultiplayer) syncFirebaseState(handCard.full);
-                        else endUserTurnAI();
-                    });
-                }, 3800);
+                        if(isMultiplayer) {
+                            isAnimating = false;
+                            syncFirebaseState(handCard.full);
+                        } else endUserTurnAI();
+                    }, false);
+                }, 2000);
 
             } else {
                 playSound('mismatch'); showToast("짝이 맞지 않습니다!");
                 selectedHandIndex = null; renderGame();
-                if(isMultiplayer) syncFirebaseState();
-                else endUserTurnAI();
+                
+                if(isMultiplayer) {
+                    isAnimating = false; syncFirebaseState();
+                } else {
+                    setTimeout(() => {
+                        endUserTurnAI();
+                    }, 1200);
+                }
             }
         }
 
@@ -765,14 +777,22 @@
             const popup = document.getElementById("flashyMatchPopup");
             document.getElementById("flashyProverbText").innerText = proverb;
             popup.classList.add("active"); popup.style.opacity = "1";
-            setTimeout(() => { popup.classList.remove("active"); popup.style.opacity = "0"; }, 4000);
+            setTimeout(() => { popup.classList.remove("active"); popup.style.opacity = "0"; }, 2000);
         }
 
-        function addMyCollection(word) { document.getElementById("myCollectionArea").innerHTML += `<div class="bg-green-500/20 p-2 rounded border border-green-500/50 text-green-100 font-bold shadow-sm">✅ ${word}</div>`.replace("비어있음",""); }
-        function addOppCollection(word) { document.getElementById("oppCollectionArea").innerHTML += `<div class="bg-pink-500/20 p-2 rounded border border-pink-500/50 text-pink-100 font-bold shadow-sm">🔴 ${word}</div>`.replace("비어있음",""); }
+        function addMyCollection(word) { 
+            const el = document.getElementById("myCollectionArea");
+            if(el.innerHTML.includes("비어있음")) el.innerHTML = "";
+            el.innerHTML += `<div class="bg-green-500/20 p-2 rounded border border-green-500/50 text-green-100 font-bold shadow-sm">✅ ${word}</div>`; 
+        }
+        function addOppCollection(word) { 
+            const el = document.getElementById("oppCollectionArea");
+            if(el.innerHTML.includes("비어있음")) el.innerHTML = "";
+            el.innerHTML += `<div class="bg-pink-500/20 p-2 rounded border border-pink-500/50 text-pink-100 font-bold shadow-sm">🔴 ${word}</div>`; 
+        }
 
         function useMagnifierItem() {
-            if(usedMagnifier) return showToast("1회만 사용 가능합니다!");
+            if(usedMagnifier || isAnimating) return showToast("1회만 사용 가능합니다!");
             if(selectedHandIndex === null) return showToast("먼저 내 패를 선택하세요!");
             let foundIdx = board.findIndex(bc => bc.id === myHand[selectedHandIndex].id);
             if(foundIdx !== -1) {
@@ -784,7 +804,7 @@
         }
 
         function useFanItem() {
-            if(usedFan) return showToast("1회만 사용 가능합니다!");
+            if(usedFan || isAnimating) return showToast("1회만 사용 가능합니다!");
             usedFan = true; playSound('select'); document.getElementById(`btnFan`).classList.add("opacity-40");
             deckBoard.push(...board); deckBoard.sort(() => Math.random() - 0.5); board = [];
             fillUniqueBoard(myHand); showToast("🌪️ 바닥 리셋!"); renderGame();
@@ -792,14 +812,15 @@
 
         let onStudyCompleteCallback = null;
 
-        function openStudyModal(card, onComplete) {
+        function openStudyModal(card, onComplete, isAITurn = false) {
             isStudying = true;
             document.getElementById("modalProverb").innerText = card.full;
             document.getElementById("modalMeaning").innerText = card.meaning;
             document.getElementById("studyModal").classList.remove("hidden");
             
             onStudyCompleteCallback = onComplete;
-            let count = 10; document.getElementById("modalTimer").innerText = count;
+            let count = isAITurn ? 3 : 5; 
+            document.getElementById("modalTimer").innerText = count;
             
             clearInterval(studyModalInterval);
             studyModalInterval = setInterval(() => { 
@@ -812,17 +833,22 @@
             playSound('select'); clearInterval(studyModalInterval);
             document.getElementById("studyModal").classList.add("hidden");
             isStudying = false; 
-            if(onStudyCompleteCallback) { const cb = onStudyCompleteCallback; onStudyCompleteCallback = null; cb(); }
+            if(onStudyCompleteCallback) { 
+                const cb = onStudyCompleteCallback; 
+                onStudyCompleteCallback = null; 
+                cb(); // 콜백 확실하게 실행
+            }
         }
 
-        // 독립된 완벽한 조선비(AI) 구동 엔진
+        // 조선비(AI) 구동 엔진
         function playAI() {
-            if (myTurn || checkGameEnd()) return; // 방어 코드
+            if (myTurn || checkGameEnd()) return;
+
+            isAnimating = true; 
 
             let matchedCard = null;
             let handIdx = -1; let boardIdx = -1;
 
-            // 바닥에 짝이 있는지 탐색
             for(let i=0; i<oppHand.length; i++) {
                 for(let j=0; j<board.length; j++) {
                     if(oppHand[i].id === board[j].id) {
@@ -833,7 +859,6 @@
             }
 
             if(handIdx !== -1) {
-                // 매칭 성공 시
                 matchedCard = oppHand[handIdx];
                 playSound('match'); oppScore += 10;
                 showFlashyPopup(matchedCard.full); speakProverb(matchedCard.full); addOppCollection(matchedCard.full);
@@ -845,19 +870,18 @@
                 
                 setTimeout(() => {
                     openStudyModal(matchedCard, () => {
-                        endAITurnAI(); // 모달 닫힌 후 확실히 내 턴으로 복귀
-                    });
-                }, 3800);
+                        endAITurnAI(); // 내 턴으로 복귀
+                    }, true); 
+                }, 2000);
             } else {
-                // 매칭 실패 시
                 playSound('mismatch'); showToast("조선비가 짝을 찾지 못해 패스합니다!");
-                setTimeout(endAITurnAI, 1200); // 짧은 딜레이 후 바로 내 턴
+                setTimeout(() => {
+                    endAITurnAI();
+                }, 1200);
             }
         }
 
-        // 종료 및 승패 조건 로직
         function checkGameEnd() {
-            // 덱이 다 떨어지고 양쪽 손패에서 바닥과 매칭할 수 있는 카드가 하나도 없을 때 종료
             if(deckBoard.length === 0) {
                 let myCanMatch = myHand.some(hc => board.some(bc => bc.id === hc.id));
                 let oppCanMatch = oppHand.some(hc => board.some(bc => bc.id === hc.id));
@@ -902,21 +926,20 @@
                 btnReturn.classList.remove("hidden");
             }
             desc.innerText = resultMsg;
-            await saveUserMoney(); // 즉시 저장
+            await saveUserMoney();
         }
 
         async function answerFinale(isCorrect) {
             if(isCorrect) {
-                playSound('match'); userMoney += selectedTierStake; // 2배 보너스
+                playSound('match'); userMoney += selectedTierStake; 
                 alert(`🎓 정답! 보너스 획득!\n최종 엽전이 늘어났습니다.`);
             } else {
                 playSound('mismatch'); alert(`오답입니다!\n보너스를 놓쳤습니다.`);
             }
             await saveUserMoney();
-            goBackToModeSelect(); // 다시 방 고르기 화면으로 매끄럽게 복귀
+            goBackToModeSelect(); 
         }
 
-        // 타임아웃 강제 턴 넘김
         function forceRandomPlay() {
             if(myHand.length === 0 || board.length === 0) {
                 if(isMultiplayer) syncFirebaseState(); 
@@ -925,6 +948,43 @@
             }
             selectedHandIndex = Math.floor(Math.random() * myHand.length);
             playCard(Math.floor(Math.random() * board.length));
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            const timerBox = document.getElementById("timerBox");
+            const timerText = document.getElementById("timerText");
+            const timerBar = document.getElementById("timerBar");
+
+            if(!myTurn || isStudying || isAnimating) {
+                timerBox.classList.remove("timer-danger");
+                timerText.innerText = "상대 차례..."; timerText.style.color = "#9ca3af";
+                timerBar.style.width = "100%"; timerBar.style.background = "#4b5563";
+                return;
+            }
+
+            timeLeft = 20;
+            timerBox.classList.remove("timer-danger");
+            timerText.style.color = "#facc15"; timerText.innerText = `${timeLeft}초`;
+            timerBar.style.width = "100%"; timerBar.style.background = "linear-gradient(to right, #eab308, #f97316)";
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerText.innerText = `${timeLeft}초`;
+                timerBar.style.width = `${(timeLeft / 20) * 100}%`;
+
+                if(timeLeft <= 5 && timeLeft > 0) {
+                    playSound('tick');
+                    timerBox.classList.add("timer-danger");
+                    timerText.style.color = "#fca5a5"; timerBar.style.background = "#ef4444";
+                }
+
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showToast("시간 초과! 패가 임의로 내어집니다.");
+                    forceRandomPlay();
+                }
+            }, 1000);
         }
     </script>
 
