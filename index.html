@@ -6,21 +6,17 @@
     <title>속담 대전 - 3D 퓨전 사극 에디션</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PeerJS for Real-time Multiplayer -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <!-- 고운돋움 폰트 적용 -->
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Gowun Dodum', sans-serif; overflow: hidden; background-color: #1a1a2e; }
         
-        /* 퓨전 사극 배경: 로비 화면 */
+        /* 퓨전 사극 배경 */
         .bg-lobby {
             background-image: url('https://images.unsplash.com/photo-1590211022204-c15c5448375b?auto=format&fit=crop&q=80&w=1920');
             background-size: cover; background-position: center;
             background-color: rgba(20, 10, 40, 0.7); background-blend-mode: multiply;
         }
-
-        /* 퓨전 사극 배경: 게임 화면 */
         .bg-game {
             background-image: url('https://images.unsplash.com/photo-1542640244-7e672d6cb466?auto=format&fit=crop&q=80&w=1920');
             background-size: cover; background-position: center;
@@ -32,7 +28,7 @@
             perspective: 1200px; display: flex; justify-content: center; align-items: center;
         }
 
-        /* 입체 보드판 (Isometric 느낌) */
+        /* 입체 보드판 */
         #boardArea {
             transform: rotateX(35deg); transform-style: preserve-3d;
             background: linear-gradient(135deg, rgba(20, 20, 50, 0.85), rgba(40, 20, 80, 0.85));
@@ -41,7 +37,7 @@
             border-radius: 20px; padding: 2rem; transition: all 0.5s ease;
         }
 
-        /* 퓨전 캐주얼 카드 스타일 */
+        /* 카드 스타일 */
         .hwatu-card {
             width: 5.5rem; height: 8.2rem;
             background: linear-gradient(135deg, #ffffff 0%, #f0ebf8 100%);
@@ -53,7 +49,6 @@
             position: relative; user-select: none;
             transform: translateZ(5px);
         }
-
         .hwatu-card:hover { 
             transform: translateZ(30px) scale(1.15) translateY(-10px); 
             border-color: #00d2d3; 
@@ -73,7 +68,6 @@
             100% { border-color: #00d2d3; box-shadow: 0 0 35px #00d2d3; transform: translateZ(20px) scale(1.15); }
         }
 
-        /* 카드 뒷면 */
         .hwatu-card.back {
             background: linear-gradient(135deg, #1e3a8a, #4c1d95);
             background-image: radial-gradient(circle, rgba(255,255,255,0.1) 10%, transparent 20%);
@@ -82,7 +76,6 @@
         .hwatu-card.back:hover { transform: translateZ(10px); border-color: #333; box-shadow: 0 10px 15px rgba(0,0,0,0.4); }
 
         .card-text { z-index: 10; word-break: keep-all; line-height: 1.3; color: #2d3436; text-shadow: 1px 1px 0px rgba(255,255,255,0.8); }
-        
         .card-type { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; color: white; z-index: 10; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .type-p1 { background: linear-gradient(90deg, #ff6b6b, #ee5253); }
         .type-p2 { background: linear-gradient(90deg, #10ac84, #01a3a4); }
@@ -98,7 +91,7 @@
         }
         .timer-danger { animation: pulse-red 1s infinite; color: #ff9f43 !important; }
 
-        /* 화려한 매칭 팝업 이펙트 */
+        /* 화려한 매칭 팝업 이펙트 최적화 (부드럽게 4초 지속) */
         #flashyMatchPopup { pointer-events: none; }
         #flashyMatchPopup.active .popup-text { animation: smooth-pop 4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes smooth-pop {
@@ -123,7 +116,6 @@
     <!-- 1. 로비 화면 -->
     <div id="lobbyScreen" class="absolute inset-0 flex flex-col items-center justify-center z-40">
         <div class="bg-black/60 backdrop-blur-md p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center max-w-md w-full border-2 border-yellow-400/50">
-            <!-- 제목: 📜 속담 대전 -->
             <h1 class="text-4xl sm:text-5xl whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-4 font-bold drop-shadow-lg">📜 속담 대전</h1>
             
             <!-- 파이어베이스 인증 정보 카드 -->
@@ -165,6 +157,7 @@
                 </div>
             </div>
 
+            <!-- 서당 단계 선택 -->
             <div class="grid grid-cols-3 gap-4 mb-6">
                 <div onclick="selectRoomTier(100)" id="tier1" class="border-4 border-yellow-500 bg-yellow-900/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg relative overflow-hidden">
                     <div class="text-xl font-bold text-yellow-300">1. 초급 서당</div>
@@ -189,20 +182,12 @@
                     <div class="text-sm font-bold text-blue-200">AI 대전 (엽전 차감 없음)</div>
                 </button>
                 <div class="bg-gradient-to-r from-green-700 to-green-900 border-2 border-green-400 p-5 rounded-2xl flex flex-col items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.5)]">
-                    <div class="text-xl font-bold text-green-200 mb-2">🤝 친구와 실시간 대결</div>
-                    <button onclick="createRoom()" id="btnCreate" class="bg-green-500 text-white px-6 py-2 rounded-xl w-full text-lg font-bold hover:bg-green-400 transition shadow-lg">방 만들기</button>
-                    <div id="roomCodeDisplay" class="hidden mt-2 text-center w-full">
-                        <span class="text-xs text-gray-300 font-bold">방 번호: </span>
-                        <span class="text-3xl font-bold tracking-widest text-white bg-black/60 rounded-lg px-4 py-1 border border-green-400" id="hostPin">----</span>
-                        <p class="text-xs text-green-300 mt-2 font-bold animate-pulse">친구가 방 번호로 들어오는 중...</p>
+                    <div class="text-xl font-bold text-green-200 mb-2">🤝 실시간 멀티플레이</div>
+                    <button onclick="quickMatch()" class="bg-green-500 text-white px-6 py-2 rounded-xl w-full text-lg font-bold hover:bg-green-400 transition shadow-lg">빠른 자동 매칭</button>
+                    <div id="matchingStatus" class="hidden mt-2 text-center w-full text-sm text-yellow-300 font-bold animate-pulse">
+                        대기실을 찾고 있습니다...
                     </div>
                 </div>
-            </div>
-
-            <div class="bg-orange-900/70 border-2 border-orange-500 p-4 rounded-2xl flex items-center justify-between shadow-lg max-w-md mx-auto">
-                <span class="text-lg font-bold text-orange-300">방 번호로 입장:</span>
-                <input type="text" id="joinPin" placeholder="4자리" maxlength="4" class="w-28 text-center p-2 border-2 border-orange-400 rounded-xl text-xl font-bold tracking-widest focus:outline-none bg-black/60 text-white">
-                <button onclick="joinRoom()" class="bg-orange-600 text-white px-5 py-2 rounded-xl text-lg font-bold hover:bg-orange-500 transition shadow">입장</button>
             </div>
         </div>
     </div>
@@ -287,7 +272,7 @@
             <div class="mt-4 grid grid-cols-2 gap-3">
                 <button onclick="sendEmote('얼쑤!')" class="bg-yellow-500/30 hover:bg-yellow-500/50 border border-yellow-500 text-yellow-300 rounded-xl p-2 font-bold text-base transition">🎉 얼쑤!</button>
                 <button onclick="sendEmote('에잇!')" class="bg-red-500/30 hover:bg-red-500/50 border border-red-500 text-red-300 rounded-xl p-2 font-bold text-base transition">😤 에잇!</button>
-                <button onclick="location.reload()" class="col-span-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl p-2 font-bold text-base border border-gray-500 transition mt-1">🚪 서당 나가기</button>
+                <button onclick="goBackToModeSelect()" class="col-span-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl p-2 font-bold text-base border border-gray-500 transition mt-1">🚪 방 나가기</button>
             </div>
         </div>
     </div>
@@ -316,16 +301,22 @@
         </div>
     </div>
 
-    <!-- 피날레 퀴즈 모달 -->
-    <div id="finaleModal" class="absolute inset-0 bg-black/90 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+    <!-- 승패 결과 / 피날레 퀴즈 모달 -->
+    <div id="finaleModal" class="absolute inset-0 bg-black/95 flex items-center justify-center z-50 hidden backdrop-blur-sm">
         <div class="bg-gradient-to-br from-yellow-900 to-orange-900 p-8 rounded-3xl max-w-xl w-full border-4 border-yellow-400 text-center shadow-[0_0_50px_rgba(250,204,21,0.5)]">
-            <div class="text-6xl mb-4">👑</div>
-            <h2 class="text-3xl font-bold text-yellow-300 mb-3 drop-shadow">최종 관문: 어사화 퀴즈!</h2>
-            <p class="text-gray-200 mb-6 font-bold">마지막 상황 문제를 맞추고 엽전을 두 배로 획득하세요!</p>
-            <div class="bg-black/60 p-6 rounded-2xl border border-yellow-500/50 mb-6 text-left">
-                <p class="font-bold text-white text-lg mb-2 leading-relaxed" id="finaleQuestion">질문 내용...</p>
+            <div id="resultEmoji" class="text-7xl mb-4">👑</div>
+            <h2 id="resultTitle" class="text-4xl font-bold text-yellow-300 mb-3 drop-shadow">결과 발표</h2>
+            <p id="resultDesc" class="text-gray-200 mb-6 font-bold text-lg">점수를 비교합니다!</p>
+            
+            <div id="quizArea" class="hidden">
+                <div class="bg-black/60 p-6 rounded-2xl border border-yellow-500/50 mb-6 text-left">
+                    <p class="font-bold text-yellow-200 text-sm mb-2 border-b border-yellow-500/30 pb-1">보너스 퀴즈 (정답 시 엽전 2배)</p>
+                    <p class="font-bold text-white text-lg mb-2 leading-relaxed" id="finaleQuestion">질문 내용...</p>
+                </div>
+                <div id="finaleOptions" class="grid grid-cols-1 gap-4"></div>
             </div>
-            <div id="finaleOptions" class="grid grid-cols-1 gap-4"></div>
+
+            <button id="btnReturnMode" onclick="goBackToModeSelect()" class="hidden mt-6 bg-gray-800 hover:bg-gray-700 border border-gray-400 text-white px-6 py-3 rounded-xl font-bold text-lg shadow transition w-full">서당 선택으로 돌아가기</button>
         </div>
     </div>
 
@@ -335,9 +326,8 @@
     <!-- 파이어베이스 데이터베이스 연결 (Module Script) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, onSnapshot, updateDoc, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // 선생님께서 설정하신 Firebase 구성
         const firebaseConfig = {
             apiKey: "AIzaSyD6u1lPNhuBlArv5YsSzaXoqTvrQICeGdo",
             authDomain: "proberb-game.firebaseapp.com",
@@ -348,18 +338,14 @@
             measurementId: "G-Y76F9ZDMB8"
         };
 
-        // 앱 초기화 및 데이터베이스 연결
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 아래 기존 일반 <script> 로직에서 사용할 수 있도록 window 객체에 등록
-        window.db = db;
-        window.collection = collection;
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.getDoc = getDoc;
-        
-        console.log("🔥 파이어베이스 데이터베이스(Firestore) 연결 완료!");
+        // window 객체에 바인딩
+        window.db = db; window.collection = collection; window.addDoc = addDoc;
+        window.getDocs = getDocs; window.doc = doc; window.setDoc = setDoc; window.getDoc = getDoc;
+        window.onSnapshot = onSnapshot; window.updateDoc = updateDoc; window.query = query;
+        window.where = where; window.deleteDoc = deleteDoc;
     </script>
 
     <!-- 게임 로직 메인 스크립트 -->
@@ -417,112 +403,75 @@
             { id: 50, p1: "울며", p2: "겨자 먹기", full: "울며 겨자 먹기", meaning: "하기 싫은 일을 어쩔 수 없이 억지로 하는 상태." }
         ];
 
-        // --- 사운드 (Web Audio API) 및 TTS ---
+        // --- 오디오 & TTS ---
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx;
-        
         function initAudio() {
             if(!audioCtx) audioCtx = new AudioContext();
             if(audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
-        }
-
-        function playHoverSound() {
+        function playSound(type) {
             if(!audioCtx || audioCtx.state === 'suspended') return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 0.05);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            if(type === 'hover') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            } else if(type === 'match') {
+                const notes = [523.25, 659.25, 783.99, 1046.50]; 
+                notes.forEach((freq, i) => {
+                    const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2); gain2.connect(audioCtx.destination); osc2.type = 'square';
+                    osc2.frequency.setValueAtTime(freq, audioCtx.currentTime + i*0.1);
+                    gain2.gain.setValueAtTime(0.1, audioCtx.currentTime + i*0.1); gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 0.2);
+                    osc2.start(audioCtx.currentTime + i*0.1); osc2.stop(audioCtx.currentTime + i*0.1 + 0.2);
+                });
+            } else if(type === 'mismatch') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+            } else if(type === 'select') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            } else if(type === 'tick') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+            }
         }
 
-        function playMatchSound() {
-            if(!audioCtx || audioCtx.state === 'suspended') return;
-            const notes = [523.25, 659.25, 783.99, 1046.50]; 
-            notes.forEach((freq, i) => {
-                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-                osc.connect(gain); gain.connect(audioCtx.destination);
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i*0.1);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime + i*0.1);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 0.2);
-                osc.start(audioCtx.currentTime + i*0.1);
-                osc.stop(audioCtx.currentTime + i*0.1 + 0.2);
-            });
-        }
-
-        function playMismatchSound() {
-            if(!audioCtx || audioCtx.state === 'suspended') return;
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
-        }
-
-        function playSelectSound() {
-            if(!audioCtx) return;
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-        }
-        
-        function playTick() {
-            if(!audioCtx) return;
-            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.type = 'square'; osc.frequency.setValueAtTime(900, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
-        }
-
-        // TTS 낭독 - 특수문자 제거 후 훈장님 톤 재생
         function speakProverb(fullProverb) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                
-                const rawText = `오호 명답이로다 ${fullProverb}`;
-                const cleanText = rawText.replace(/[^가-힣a-zA-Z0-9\s]/g, '');
-
+                const cleanText = `오호 명답이로다 ${fullProverb}`.replace(/[^가-힣a-zA-Z0-9\s]/g, '');
                 const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.lang = 'ko-KR'; 
-                utterance.pitch = 0.5; 
-                utterance.rate = 0.85; 
-                
+                utterance.lang = 'ko-KR'; utterance.pitch = 0.5; utterance.rate = 0.85; 
                 const voices = window.speechSynthesis.getVoices();
-                const koreanVoices = voices.filter(v => v.lang.includes('ko'));
-                let maleVoice = koreanVoices.find(v => v.name.toLowerCase().includes('male'));
-                
-                if (maleVoice) {
-                    utterance.voice = maleVoice;
-                } else if (koreanVoices.length > 0) {
-                    utterance.voice = koreanVoices.length > 1 ? koreanVoices[1] : koreanVoices[0];
-                }
-
+                let maleVoice = voices.find(v => v.lang.includes('ko') && v.name.toLowerCase().includes('male'));
+                if (maleVoice) utterance.voice = maleVoice;
+                else utterance.voice = voices.find(v => v.lang.includes('ko')) || null;
                 window.speechSynthesis.speak(utterance);
             }
         }
 
-        // --- 상태 변수 ---
+        // --- 전역 변수 ---
         let userMoney = 1000;
         let selectedTierStake = 100;
         let myName = "";
         let isMultiplayer = false;
-        let peer, conn;
         let myTurn = true;
         let isStudying = false; 
+
+        // Firebase Multi DB
+        let currentRoomId = null;
+        let isHost = false;
+        let unsubscribeRoom = null;
 
         let deckHand = [], deckBoard = [];
         let myHand = [], oppHand = [], board = [];
@@ -533,233 +482,223 @@
         let timerInterval, timeLeft = 20;
         let studyModalInterval;
 
-        // 파이어베이스에서 보유 엽전 로딩하기
-        async function loadUserMoney() {
-            if(!window.db) return;
-            try {
-                const userRef = window.doc(window.db, "users", myName);
-                const docSnap = await window.getDoc(userRef);
-                if(docSnap.exists()) {
-                    userMoney = docSnap.data().money;
-                    document.getElementById("userMoneyDisplay").innerText = userMoney;
-                } else {
-                    // 첫 접속이면 1000냥으로 DB 생성
-                    await window.setDoc(userRef, { money: 1000 });
-                }
-            } catch(e) { console.error("엽전 로딩 오류:", e); }
-        }
-
-        // 파이어베이스에 엽전 저장하기
-        async function saveUserMoney() {
-            if(!window.db) return;
-            try {
-                const userRef = window.doc(window.db, "users", myName);
-                await window.setDoc(userRef, { money: userMoney }, { merge: true });
-            } catch(e) { console.error("엽전 저장 오류:", e); }
-        }
-
-        function selectRoomTier(minStake) {
-            initAudio();
-            if(userMoney < minStake) {
-                showToast(`엽전이 부족합니다! (${minStake}냥 이상 필요)`); return;
-            }
-            selectedTierStake = minStake === 10000 ? 2000 : (minStake === 1000 ? 500 : 100);
-            
-            [100, 1000, 10000].forEach((stake, idx) => {
-                const el = document.getElementById(`tier${idx+1}`);
-                if(stake === minStake) {
-                    el.className = "border-4 border-yellow-500 bg-yellow-900/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg relative overflow-hidden";
-                } else {
-                    el.className = "border-2 border-gray-500 bg-gray-800/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg opacity-60";
-                }
-            });
-            playSelectSound();
-        }
-
-        async function goToModeSelect() {
-            initAudio();
-            const input = document.getElementById("playerName").value.trim();
-            if(!input) { alert("이름을 입력하세요!"); return; }
-            myName = input;
-            document.getElementById("myNameDisplay").innerText = myName;
-            document.getElementById("welcomeMsg").innerText = `${myName} 님, 환영합니다!`;
-            
-            // 파이어베이스에서 DB 연동
-            await loadUserMoney();
-
-            document.getElementById("lobbyScreen").classList.add("hidden");
-            document.getElementById("modeScreen").classList.remove("hidden");
-            playSelectSound();
-        }
-
         function showToast(msg) {
             const toast = document.getElementById("toast");
             toast.innerText = msg; toast.className = "show";
             setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
-        function createRoom() {
-            playSelectSound();
-            const pin = Math.floor(1000 + Math.random() * 9000).toString();
-            document.getElementById("btnCreate").classList.add("hidden");
-            document.getElementById("roomCodeDisplay").classList.remove("hidden");
-            document.getElementById("hostPin").innerText = pin;
+        // Firebase 엽전 처리
+        async function loadUserMoney() {
+            if(!window.db) return;
+            try {
+                const docSnap = await window.getDoc(window.doc(window.db, "users", myName));
+                if(docSnap.exists()) userMoney = docSnap.data().money;
+                else await window.setDoc(window.doc(window.db, "users", myName), { money: 1000 });
+                document.getElementById("userMoneyDisplay").innerText = userMoney;
+            } catch(e) { console.error(e); }
+        }
 
-            peer = new Peer('sokdam-' + pin);
-            peer.on('connection', (connection) => {
-                conn = connection; setupConnection();
-                isMultiplayer = true; myTurn = true;
-                showToast("친구가 입장했습니다! 게임을 시작합니다.");
-                startGameLogic();
+        async function saveUserMoney() {
+            if(!window.db) return;
+            document.getElementById("userMoneyDisplay").innerText = userMoney;
+            try { await window.setDoc(window.doc(window.db, "users", myName), { money: userMoney }, { merge: true }); } 
+            catch(e) { console.error(e); }
+        }
+
+        // UI 이동
+        function selectRoomTier(minStake) {
+            initAudio();
+            if(userMoney < minStake) { showToast(`엽전 부족! (${minStake}냥 이상 필요)`); return; }
+            selectedTierStake = minStake === 10000 ? 2000 : (minStake === 1000 ? 500 : 100);
+            
+            [100, 1000, 10000].forEach((stake, idx) => {
+                const el = document.getElementById(`tier${idx+1}`);
+                if(stake === minStake) el.className = "border-4 border-yellow-500 bg-yellow-900/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg relative overflow-hidden";
+                else el.className = "border-2 border-gray-500 bg-gray-800/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg opacity-60";
             });
+            playSound('select');
         }
 
-        function joinRoom() {
-            playSelectSound();
-            const pin = document.getElementById("joinPin").value.trim();
-            if(pin.length !== 4) { alert("4자리 숫자를 입력하세요!"); return; }
-
-            peer = new Peer();
-            peer.on('open', () => {
-                conn = peer.connect('sokdam-' + pin);
-                conn.on('open', () => {
-                    setupConnection();
-                    isMultiplayer = true; myTurn = false;
-                    showToast("방 입장 성공! 방장의 시작을 기다립니다.");
-                    document.getElementById("modeScreen").classList.add("hidden");
-                    document.getElementById("mainBody").classList.remove("bg-lobby");
-                    document.getElementById("gameScreen").classList.remove("hidden");
-                });
-            });
+        async function goToModeSelect() {
+            initAudio();
+            const input = document.getElementById("playerName").value.trim();
+            if(!input) { alert("이름 입력 필수!"); return; }
+            myName = input;
+            document.getElementById("myNameDisplay").innerText = myName;
+            document.getElementById("welcomeMsg").innerText = `${myName} 님, 환영합니다!`;
+            
+            await loadUserMoney();
+            document.getElementById("lobbyScreen").classList.add("hidden");
+            document.getElementById("modeScreen").classList.remove("hidden");
+            playSound('select');
         }
 
-        function setupConnection() {
-            conn.on('data', (data) => {
-                if(data.type === 'SYNC') {
-                    board = data.board; oppHand = data.hostHand; myHand = data.guestHand;
-                    oppScore = data.hostScore; myScore = data.guestScore;
-                    myTurn = data.isGuestTurn; deckHand = data.deckHand; deckBoard = data.deckBoard;
-                    document.getElementById("oppName").innerText = data.hostName;
-                    
-                    if(data.lastMatched) addOppCollection(data.lastMatched);
-                    renderGame(); 
-                    if(myTurn && !isStudying) startTimer();
-                } else if(data.type === 'STUDY_START') {
-                    showToast("상대방이 속담을 확인하고 있습니다...");
-                    clearInterval(timerInterval);
-                } else if(data.type === 'EMOTE') {
-                    playSelectSound(); showToast(`상대방: ${data.msg}`);
-                } else if(data.type === 'POPUP') {
-                    triggerFlashyPopup(data.proverb);
-                }
-            });
-        }
-
-        function syncState(lastMatchedProverb = null) {
-            if(!isMultiplayer || !conn) return;
-            conn.send({
-                type: 'SYNC', hostName: myName, board: board, hostHand: myHand, guestHand: oppHand,
-                hostScore: myScore, guestScore: oppScore, isGuestTurn: !myTurn, 
-                deckHand: deckHand, deckBoard: deckBoard, lastMatched: lastMatchedProverb
-            });
-        }
-
-        function sendEmote(msg) {
-            playSelectSound();
-            if(isMultiplayer && conn) conn.send({ type: 'EMOTE', msg: msg });
-            showToast(`나: ${msg}`);
-        }
-
-        function startTimer() {
+        function goBackToModeSelect() {
+            playSound('select');
             clearInterval(timerInterval);
-            const timerBox = document.getElementById("timerBox");
-            const timerText = document.getElementById("timerText");
-            const timerBar = document.getElementById("timerBar");
-
-            if(!myTurn || isStudying) {
-                timerBox.classList.remove("timer-danger");
-                timerText.innerText = "상대 차례..."; timerText.style.color = "#9ca3af";
-                timerBar.style.width = "100%"; timerBar.style.background = "#4b5563";
-                return;
+            if(unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+            if(currentRoomId && isMultiplayer) {
+                // 방 나갈때 삭제 처리 (단순화)
+                window.deleteDoc(window.doc(window.db, "rooms", currentRoomId)).catch(e=>console.log(e));
             }
+            
+            // 초기화
+            document.getElementById("gameScreen").classList.add("hidden");
+            document.getElementById("finaleModal").classList.add("hidden");
+            document.getElementById("mainBody").classList.add("bg-lobby");
+            document.getElementById("modeScreen").classList.remove("hidden");
+            document.getElementById("myCollectionArea").innerHTML = `<p class="text-gray-400 ml-2">비어있음</p>`;
+            document.getElementById("oppCollectionArea").innerHTML = `<p class="text-gray-400 ml-2">비어있음</p>`;
+            myScore = 0; oppScore = 0;
+            usedMagnifier = false; usedFan = false;
+            document.getElementById(`btnMagnifier`).classList.remove("opacity-40");
+            document.getElementById(`btnFan`).classList.remove("opacity-40");
+            loadUserMoney();
+        }
 
-            timeLeft = 20;
-            timerBox.classList.remove("timer-danger");
-            timerText.style.color = "#facc15"; timerText.innerText = `${timeLeft}초`;
-            timerBar.style.width = "100%"; timerBar.style.background = "linear-gradient(to right, #eab308, #f97316)";
+        // ------------------ Firebase 매칭 로직 ------------------
+        async function quickMatch() {
+            if(!window.db) { alert("DB 연결 전입니다."); return; }
+            if(userMoney < selectedTierStake) { showToast("참여 엽전이 부족합니다!"); return; }
+            playSound('select');
+            isMultiplayer = true;
 
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                timerText.innerText = `${timeLeft}초`;
-                timerBar.style.width = `${(timeLeft / 20) * 100}%`;
+            const statusEl = document.getElementById("matchingStatus");
+            statusEl.classList.remove("hidden");
+            statusEl.innerText = "대기 방을 찾는 중...";
 
-                if(timeLeft <= 5 && timeLeft > 0) {
-                    playTick();
-                    timerBox.classList.add("timer-danger");
-                    timerText.style.color = "#fca5a5"; timerBar.style.background = "#ef4444";
+            const roomsRef = window.collection(window.db, "rooms");
+            const q = window.query(roomsRef, window.where("status", "==", "waiting"));
+            
+            try {
+                const snap = await window.getDocs(q);
+                if(!snap.empty) {
+                    // 방 존재: Guest로 참여
+                    const roomDoc = snap.docs[0];
+                    currentRoomId = roomDoc.id;
+                    isHost = false; myTurn = false;
+                    await window.updateDoc(window.doc(window.db, "rooms", currentRoomId), {
+                        guestName: myName, status: "playing"
+                    });
+                    document.getElementById("oppName").innerText = roomDoc.data().hostName;
+                    statusEl.classList.add("hidden");
+                    startGameUI();
+                    listenToRoom();
+                } else {
+                    // 방 생성: Host로 대기
+                    isHost = true; myTurn = true;
+                    const newRoom = await window.addDoc(roomsRef, {
+                        hostName: myName, guestName: "", status: "waiting", turn: "host",
+                        board: [], hostHand: [], guestHand: [], deckHand: [], deckBoard: [],
+                        hostScore: 0, guestScore: 0, lastAction: ""
+                    });
+                    currentRoomId = newRoom.id;
+                    statusEl.innerText = "방 생성 완료! 상대를 기다립니다...";
+                    listenToRoom();
                 }
+            } catch(e) { console.error("매칭 에러:", e); statusEl.innerText = "오류 발생"; }
+        }
 
-                if(timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    showToast("시간 초과! 패가 임의로 내어집니다.");
-                    forceRandomPlay();
+        function listenToRoom() {
+            unsubscribeRoom = window.onSnapshot(window.doc(window.db, "rooms", currentRoomId), (docSnap) => {
+                if(!docSnap.exists()) {
+                    showToast("방이 종료되었습니다."); goBackToModeSelect(); return;
                 }
-            }, 1000);
+                const data = docSnap.data();
+
+                // 호스트인데 게스트가 들어오면 게임 세팅 시작
+                if(isHost && data.status === "playing" && deckBoard.length === 0) {
+                    document.getElementById("oppName").innerText = data.guestName;
+                    document.getElementById("matchingStatus").classList.add("hidden");
+                    setupNewGameData(); // 호스트가 덱 생성해서 쏨
+                    startGameUI();
+                }
+                // 게스트 & 호스트 데이터 싱크
+                if(data.status === "playing" && data.deckBoard && data.deckBoard.length > 0) {
+                    board = data.board;
+                    myHand = isHost ? data.hostHand : data.guestHand;
+                    oppHand = isHost ? data.guestHand : data.hostHand;
+                    deckHand = data.deckHand; deckBoard = data.deckBoard;
+                    myScore = isHost ? data.hostScore : data.guestScore;
+                    oppScore = isHost ? data.guestScore : data.hostScore;
+                    myTurn = (data.turn === "host" && isHost) || (data.turn === "guest" && !isHost);
+
+                    if(data.lastAction.startsWith("MATCH:")) {
+                        const word = data.lastAction.split(":")[1];
+                        if(myTurn) addOppCollection(word); // 방금 상대가 맞춘 것
+                    }
+
+                    renderGame();
+                    if(!isStudying) {
+                        checkGameEnd(); 
+                        startTimer();
+                    }
+                }
+            });
         }
 
-        function forceRandomPlay() {
-            if(myHand.length === 0 || board.length === 0) return;
-            selectedHandIndex = Math.floor(Math.random() * myHand.length);
-            playCard(Math.floor(Math.random() * board.length));
+        async function syncFirebaseState(matchWord = "") {
+            if(!isMultiplayer || !currentRoomId) return;
+            const updateData = {
+                board: board, deckHand: deckHand, deckBoard: deckBoard,
+                hostHand: isHost ? myHand : oppHand,
+                guestHand: isHost ? oppHand : myHand,
+                hostScore: isHost ? myScore : oppScore,
+                guestScore: isHost ? oppScore : myScore,
+                turn: myTurn ? (isHost ? "guest" : "host") : (isHost ? "host" : "guest"), // 턴 넘기기
+                lastAction: matchWord ? `MATCH:${matchWord}` : `PASS:${Date.now()}`
+            };
+            myTurn = false; // 보낸 즉시 내 턴 종료
+            await window.updateDoc(window.doc(window.db, "rooms", currentRoomId), updateData);
         }
 
-        function startAIGame() {
-            playSelectSound(); isMultiplayer = false;
-            document.getElementById("oppName").innerText = "조선비 (AI)";
-            startGameLogic();
-        }
-
-        function startGameLogic() {
+        // ------------------ 게임 공통 로직 ------------------
+        function startGameUI() {
             document.getElementById("modeScreen").classList.add("hidden");
             document.getElementById("mainBody").classList.remove("bg-lobby");
             document.getElementById("gameScreen").classList.remove("hidden");
+        }
 
+        function startAIGame() {
+            playSound('select'); isMultiplayer = false; isHost = true; myTurn = true;
+            document.getElementById("oppName").innerText = "조선비 (AI)";
+            startGameUI();
+            setupNewGameData();
+            startTimer();
+        }
+
+        function setupNewGameData() {
             deckHand = []; deckBoard = [];
-            
-            // 50개 중 20개만 랜덤 추출하여 게임 진행
             const gameProverbs = [...proverbsAll].sort(() => Math.random() - 0.5).slice(0, 20);
-
             gameProverbs.forEach(p => {
                 deckHand.push({ id: p.id, type: 'p1', text: p.p1, full: p.full, meaning: p.meaning });
                 deckBoard.push({ id: p.id, type: 'p2', text: p.p2, full: p.full, meaning: p.meaning });
             });
-            
             deckHand.sort(() => Math.random() - 0.5);
             deckBoard.sort(() => Math.random() - 0.5);
-
-            myHand = deckHand.splice(0, 5); 
-            oppHand = deckHand.splice(0, 5);
-            ensureBoardHasMatch(myTurn ? myHand : oppHand);
-
+            myHand = deckHand.splice(0, 5); oppHand = deckHand.splice(0, 5);
+            
+            fillUniqueBoard(myTurn ? myHand : oppHand);
             renderGame();
-            if(isMultiplayer && myTurn) syncState();
-            startTimer();
+            if(isMultiplayer && isHost) syncFirebaseState();
         }
 
-        function ensureBoardHasMatch(targetHand) {
-            while(board.length < 8 && deckBoard.length > 0) board.push(deckBoard.pop());
-            if (!targetHand || targetHand.length === 0) return;
-
-            let matchExists = false;
-            for (let hc of targetHand) {
-                for (let bc of board) { if (hc.id === bc.id) { matchExists = true; break; } }
-                if(matchExists) break;
+        // 핵심 수정: 바닥 중복패 차단 + 타겟 손패 1개 매칭 보장
+        function fillUniqueBoard(targetHand) {
+            while(board.length < 8 && deckBoard.length > 0) {
+                // 중복 안되는 카드 찾기
+                let uniqueIdx = deckBoard.findIndex(dc => !board.some(bc => bc.id === dc.id));
+                if(uniqueIdx !== -1) board.push(deckBoard.splice(uniqueIdx, 1)[0]);
+                else break; // 남은 덱이 모두 이미 바닥에 있는 ID라면 중단
             }
 
-            if (!matchExists && deckBoard.length > 0 && board.length > 0) {
+            if (!targetHand || targetHand.length === 0 || board.length === 0) return;
+
+            let matchExists = board.some(bc => targetHand.some(hc => hc.id === bc.id));
+            if (!matchExists && deckBoard.length > 0) {
                 for (let i = 0; i < targetHand.length; i++) {
-                    let hc = targetHand[i];
-                    let deckIdx = deckBoard.findIndex(dc => dc.id === hc.id);
+                    let deckIdx = deckBoard.findIndex(dc => dc.id === targetHand[i].id && !board.some(bc => bc.id === dc.id));
                     if (deckIdx !== -1) {
                         let temp = board[0];
                         board[0] = deckBoard.splice(deckIdx, 1)[0];
@@ -778,11 +717,7 @@
             const myHandEl = document.getElementById("myHandArea"); myHandEl.innerHTML = "";
             myHand.forEach((card, idx) => {
                 const isSel = selectedHandIndex === idx ? 'selected' : '';
-                myHandEl.innerHTML += `
-                    <div class="hwatu-card ${isSel}" onclick="selectMyCard(${idx})" onmouseenter="playHoverSound()">
-                        <div class="card-type type-p1">앞구절</div>
-                        <div class="card-text">${card.text}</div>
-                    </div>`;
+                myHandEl.innerHTML += `<div class="hwatu-card ${isSel}" onclick="selectMyCard(${idx})" onmouseenter="playSound('hover')"><div class="card-type type-p1">앞구절</div><div class="card-text">${card.text}</div></div>`;
             });
 
             const oppHandEl = document.getElementById("oppHandArea"); oppHandEl.innerHTML = "";
@@ -790,30 +725,13 @@
 
             const boardEl = document.getElementById("boardArea"); boardEl.innerHTML = "";
             board.forEach((card, idx) => {
-                boardEl.innerHTML += `
-                    <div class="hwatu-card" id="boardCard-${idx}" onclick="playCard(${idx})" onmouseenter="playHoverSound()">
-                        <div class="card-type type-p2">뒷구절</div>
-                        <div class="card-text text-[0.95rem]">${card.text}</div>
-                    </div>`;
+                boardEl.innerHTML += `<div class="hwatu-card" id="boardCard-${idx}" onclick="playCard(${idx})" onmouseenter="playSound('hover')"><div class="card-type type-p2">뒷구절</div><div class="card-text text-[0.95rem]">${card.text}</div></div>`;
             });
         }
 
         function selectMyCard(idx) {
             if(!myTurn || isStudying) { showToast("차례를 기다리세요!"); return; }
-            playSelectSound();
-            selectedHandIndex = (selectedHandIndex === idx) ? null : idx;
-            renderGame();
-        }
-
-        function triggerFlashyPopup(proverb) {
-            const popup = document.getElementById("flashyMatchPopup");
-            document.getElementById("flashyProverbText").innerText = proverb;
-            popup.classList.add("active");
-            popup.style.opacity = "1";
-            setTimeout(() => {
-                popup.classList.remove("active");
-                popup.style.opacity = "0";
-            }, 4000);
+            playSound('select'); selectedHandIndex = (selectedHandIndex === idx) ? null : idx; renderGame();
         }
 
         function playCard(boardIdx) {
@@ -821,207 +739,171 @@
             if(selectedHandIndex === null) { showToast("먼저 낼 앞구절 패를 고르세요!"); return; }
 
             clearInterval(timerInterval);
-
-            const handCard = myHand[selectedHandIndex];
-            const boardCard = board[boardIdx];
+            const handCard = myHand[selectedHandIndex]; const boardCard = board[boardIdx];
 
             if(handCard.id === boardCard.id) {
-                playMatchSound();
-                triggerFlashyPopup(handCard.full);
-                if(isMultiplayer && conn) conn.send({ type: 'POPUP', proverb: handCard.full });
+                playSound('match'); showFlashyPopup(handCard.full);
+                myScore += 10; speakProverb(handCard.full); addMyCollection(handCard.full);
 
-                myScore += 10;
-                speakProverb(handCard.full);
-                addMyCollection(handCard.full);
-
-                myHand.splice(selectedHandIndex, 1);
-                board.splice(boardIdx, 1);
-                
+                myHand.splice(selectedHandIndex, 1); board.splice(boardIdx, 1);
                 if(deckHand.length > 0) myHand.push(deckHand.pop());
-                ensureBoardHasMatch(oppHand);
-
+                fillUniqueBoard(oppHand);
                 selectedHandIndex = null;
                 
                 setTimeout(() => {
                     openStudyModal(handCard, () => {
-                        if(isMultiplayer) {
-                            myTurn = false; syncState(handCard.full); startTimer();
-                        } else {
-                            myTurn = false; renderGame(); startTimer();
-                            setTimeout(playAI, 1500);
-                        }
+                        if(isMultiplayer) syncFirebaseState(handCard.full);
+                        else { myTurn = false; renderGame(); checkGameEnd(); startTimer(); setTimeout(playAI, 1500); }
                     });
                 }, 3800);
 
             } else {
-                playMismatchSound();
-                showToast("짝이 맞지 않습니다!");
-                selectedHandIndex = null;
-                renderGame();
-                if(isMultiplayer) { myTurn = false; syncState(); startTimer(); }
+                playSound('mismatch'); showToast("짝이 맞지 않습니다!");
+                selectedHandIndex = null; renderGame();
+                if(isMultiplayer) syncFirebaseState();
                 else { myTurn = false; setTimeout(playAI, 1200); }
             }
         }
 
-        function addMyCollection(proverbFull) {
-            const el = document.getElementById("myCollectionArea");
-            if(el.innerHTML.includes("비어있음")) el.innerHTML = "";
-            el.innerHTML += `<div class="bg-green-500/20 p-2 rounded border border-green-500/50 text-green-100 font-bold shadow-sm">✅ ${proverbFull}</div>`;
+        function showFlashyPopup(proverb) {
+            const popup = document.getElementById("flashyMatchPopup");
+            document.getElementById("flashyProverbText").innerText = proverb;
+            popup.classList.add("active"); popup.style.opacity = "1";
+            setTimeout(() => { popup.classList.remove("active"); popup.style.opacity = "0"; }, 4000);
         }
-        function addOppCollection(proverbFull) {
-            const el = document.getElementById("oppCollectionArea");
-            if(el.innerHTML.includes("비어있음")) el.innerHTML = "";
-            el.innerHTML += `<div class="bg-pink-500/20 p-2 rounded border border-pink-500/50 text-pink-100 font-bold shadow-sm">🔴 ${proverbFull}</div>`;
-        }
+
+        function addMyCollection(word) { document.getElementById("myCollectionArea").innerHTML += `<div class="bg-green-500/20 p-2 rounded border border-green-500/50 text-green-100 font-bold shadow-sm">✅ ${word}</div>`.replace("비어있음",""); }
+        function addOppCollection(word) { document.getElementById("oppCollectionArea").innerHTML += `<div class="bg-pink-500/20 p-2 rounded border border-pink-500/50 text-pink-100 font-bold shadow-sm">🔴 ${word}</div>`.replace("비어있음",""); }
 
         function useMagnifierItem() {
-            if(usedMagnifier) { showToast("돋보기는 1회만 사용 가능합니다!"); return; }
-            if(selectedHandIndex === null) { showToast("먼저 내 패를 선택하세요!"); return; }
-
-            const handCard = myHand[selectedHandIndex];
-            let foundIdx = -1;
-            board.forEach((bc, idx) => { if(bc.id === handCard.id) foundIdx = idx; });
-
+            if(usedMagnifier) return showToast("1회만 사용 가능합니다!");
+            if(selectedHandIndex === null) return showToast("먼저 내 패를 선택하세요!");
+            let foundIdx = board.findIndex(bc => bc.id === myHand[selectedHandIndex].id);
             if(foundIdx !== -1) {
-                usedMagnifier = true; playSelectSound();
+                usedMagnifier = true; playSound('select');
                 document.getElementById(`btnMagnifier`).classList.add("opacity-40");
-                const targetEl = document.getElementById(`boardCard-${foundIdx}`);
-                targetEl.classList.add("hint-highlight");
-                showToast("🔍 짝이 되는 뒷구절이 반짝입니다!");
-                setTimeout(() => targetEl.classList.remove("hint-highlight"), 3000);
-            } else {
-                showToast("바닥에 짝이 되는 뒷구절이 없습니다!");
-            }
+                const el = document.getElementById(`boardCard-${foundIdx}`); el.classList.add("hint-highlight");
+                showToast("🔍 뒷구절 힌트 발견!"); setTimeout(() => el.classList.remove("hint-highlight"), 3000);
+            } else showToast("짝이 없습니다!");
         }
 
         function useFanItem() {
-            if(usedFan) { showToast("부채는 1회만 사용 가능합니다!"); return; }
-            usedFan = true; playSelectSound();
-            document.getElementById(`btnFan`).classList.add("opacity-40");
-
-            deckBoard.push(...board);
-            deckBoard.sort(() => Math.random() - 0.5);
-            board = deckBoard.splice(0, 8);
-            ensureBoardHasMatch(myHand); 
-            showToast("🌪️ 바닥 뒷구절 패가 리셋되었습니다!");
-            renderGame();
+            if(usedFan) return showToast("1회만 사용 가능합니다!");
+            usedFan = true; playSound('select'); document.getElementById(`btnFan`).classList.add("opacity-40");
+            deckBoard.push(...board); deckBoard.sort(() => Math.random() - 0.5); board = [];
+            fillUniqueBoard(myHand); showToast("🌪️ 바닥 리셋!"); renderGame();
         }
-
-        let onStudyCompleteCallback = null;
 
         function openStudyModal(card, onComplete) {
             isStudying = true;
-            if(isMultiplayer && conn) conn.send({ type: 'STUDY_START' });
-
             document.getElementById("modalProverb").innerText = card.full;
             document.getElementById("modalMeaning").innerText = card.meaning;
             document.getElementById("studyModal").classList.remove("hidden");
-
-            onStudyCompleteCallback = onComplete;
-            let count = 10;
-            document.getElementById("modalTimer").innerText = count;
-            clearInterval(studyModalInterval);
-            studyModalInterval = setInterval(() => {
-                count--;
-                document.getElementById("modalTimer").innerText = count;
-                if(count <= 0) closeStudyModal();
-            }, 1000);
+            let count = 10; document.getElementById("modalTimer").innerText = count;
+            studyModalInterval = setInterval(() => { count--; document.getElementById("modalTimer").innerText = count; if(count <= 0) closeStudyModal(onComplete); }, 1000);
+            document.getElementById("studyModal").onclick = () => closeStudyModal(onComplete); // Click to skip
         }
 
-        function closeStudyModal() {
-            playSelectSound();
-            clearInterval(studyModalInterval);
+        function closeStudyModal(cb) {
+            playSound('select'); clearInterval(studyModalInterval);
             document.getElementById("studyModal").classList.add("hidden");
-            isStudying = false;
-            if(onStudyCompleteCallback) {
-                const cb = onStudyCompleteCallback; onStudyCompleteCallback = null; cb(); 
-            }
+            isStudying = false; if(cb) cb(); else if (onStudyCompleteCallback) { onStudyCompleteCallback(); onStudyCompleteCallback=null; }
         }
 
         function playAI() {
-            let matched = false;
-            let matchedCard = null;
+            let matched = false; let matchedCard = null;
             for(let i=0; i<oppHand.length; i++) {
                 for(let j=0; j<board.length; j++) {
                     if(oppHand[i].id === board[j].id) {
-                        playMatchSound();
-                        oppScore += 10;
-                        matchedCard = oppHand[i];
-                        
-                        triggerFlashyPopup(matchedCard.full);
-                        speakProverb(matchedCard.full);
-                        addOppCollection(matchedCard.full);
-
+                        playSound('match'); oppScore += 10; matchedCard = oppHand[i];
+                        showFlashyPopup(matchedCard.full); speakProverb(matchedCard.full); addOppCollection(matchedCard.full);
                         oppHand.splice(i, 1); board.splice(j, 1);
                         if(deckHand.length > 0) oppHand.push(deckHand.pop());
-                        ensureBoardHasMatch(myHand);
-                        matched = true; break;
+                        fillUniqueBoard(myHand); matched = true; break;
                     }
                 }
                 if(matched) break;
             }
-
             if(matched) {
-                setTimeout(() => {
-                    openStudyModal(matchedCard, () => {
-                        if(deckBoard.length === 0 && (myHand.length === 0 || oppHand.length === 0)) {
-                            openFinaleQuiz();
-                        } else {
-                            myTurn = true; renderGame(); startTimer();
-                        }
-                    });
-                }, 3800);
+                setTimeout(() => { openStudyModal(matchedCard, () => { myTurn = true; renderGame(); checkGameEnd(); startTimer(); }); }, 3800);
             } else {
-                showToast("조선비가 짝을 찾지 못했습니다.");
-                playMismatchSound();
-                if(deckBoard.length === 0 && (myHand.length === 0 || oppHand.length === 0)) {
-                    openFinaleQuiz();
-                } else {
-                    myTurn = true; renderGame(); startTimer();
-                }
+                playSound('mismatch'); showToast("조선비 패스.");
+                myTurn = true; renderGame(); checkGameEnd(); startTimer();
             }
         }
 
-        function openFinaleQuiz() {
-            clearInterval(timerInterval);
-            document.getElementById("finaleModal").classList.remove("hidden");
-            
-            const q = {
-                question: "지호가 평소에는 공부를 안 하다가, 시험 전날 허둥지둥하고 있습니다. 이 상황에 어울리는 속담은?",
-                options: ["소 잃고 외양간 고친다", "누워서 떡 먹기", "금강산도 식후경"],
-                correct: 0
-            };
+        // 핵심 수정: 종료 및 승패 조건 로직
+        function checkGameEnd() {
+            // 패가 더 이상 없고 낼 것도 없을 때
+            if(myHand.length === 0 && oppHand.length === 0 && deckBoard.length === 0) {
+                clearInterval(timerInterval); finalizeGame(); return true;
+            }
+            return false;
+        }
 
-            document.getElementById("finaleQuestion").innerText = q.question;
-            const optEl = document.getElementById("finaleOptions"); optEl.innerHTML = "";
-            q.options.forEach((opt, idx) => {
-                optEl.innerHTML += `
-                    <button onclick="answerFinale(${idx === q.correct})" class="bg-yellow-900/50 hover:bg-yellow-800/80 border-2 border-yellow-500 p-4 rounded-xl text-xl font-bold text-yellow-100 shadow-[0_0_15px_rgba(250,204,21,0.4)] transition">
-                        ${idx + 1}. ${opt}
-                    </button>`;
-            });
+        async function finalizeGame() {
+            document.getElementById("finaleModal").classList.remove("hidden");
+            const title = document.getElementById("resultTitle");
+            const desc = document.getElementById("resultDesc");
+            const emoji = document.getElementById("resultEmoji");
+            const quizArea = document.getElementById("quizArea");
+            const btnReturn = document.getElementById("btnReturnMode");
+            
+            quizArea.classList.add("hidden"); btnReturn.classList.add("hidden");
+
+            let resultMsg = "";
+            if (myScore > oppScore) {
+                // 승리
+                emoji.innerText = "👑"; title.innerText = "승리 대감!";
+                resultMsg = `[${myScore} : ${oppScore}]\n판돈 ${selectedTierStake}냥 획득! 퀴즈를 맞추면 보너스!`;
+                userMoney += selectedTierStake;
+                quizArea.classList.remove("hidden");
+                
+                // 퀴즈 렌더링
+                const q = { question: "지호가 평소에는 공부를 안 하다가, 시험 전날 허둥지둥하고 있습니다. 이 상황에 어울리는 속담은?", options: ["소 잃고 외양간 고친다", "누워서 떡 먹기", "금강산도 식후경"], correct: 0 };
+                document.getElementById("finaleQuestion").innerText = q.question;
+                const optEl = document.getElementById("finaleOptions"); optEl.innerHTML = "";
+                q.options.forEach((opt, idx) => {
+                    optEl.innerHTML += `<button onclick="answerFinale(${idx === q.correct})" class="bg-yellow-900/50 hover:bg-yellow-800/80 border-2 border-yellow-500 p-4 rounded-xl text-xl font-bold text-yellow-100 shadow transition">${idx + 1}. ${opt}</button>`;
+                });
+            } else if (myScore < oppScore) {
+                // 패배
+                emoji.innerText = "😢"; title.innerText = "패배...";
+                resultMsg = `[${myScore} : ${oppScore}]\n판돈 ${selectedTierStake}냥을 잃었습니다.`;
+                userMoney -= selectedTierStake; btnReturn.classList.remove("hidden");
+            } else {
+                // 무승부
+                emoji.innerText = "🤝"; title.innerText = "무승부";
+                resultMsg = `[${myScore} : ${oppScore}]\n판돈을 돌려받았습니다.`;
+                btnReturn.classList.remove("hidden");
+            }
+            desc.innerText = resultMsg;
+            await saveUserMoney(); // 즉시 저장
         }
 
         async function answerFinale(isCorrect) {
-            document.getElementById("finaleModal").classList.add("hidden");
             if(isCorrect) {
-                playMatchSound();
-                myScore += 50;
-                userMoney += selectedTierStake * 2;
-                alert(`🎓 정답입니다! 보너스 +50점 획득!\n\n🎉 대승리! 엽전 ${selectedTierStake * 2}냥을 획득했습니다!`);
+                playSound('match'); userMoney += selectedTierStake; // 2배 보너스
+                alert(`🎓 정답! 보너스 획득!\n최종 엽전이 늘어났습니다.`);
             } else {
-                playMismatchSound();
-                alert(`아쉽게도 오답입니다!\n\n게임이 끝났습니다.`);
+                playSound('mismatch'); alert(`오답입니다!\n보너스를 놓쳤습니다.`);
             }
-            // 최종 보유 엽전을 파이어베이스에 저장
-            if (typeof saveUserMoney === 'function') {
-                await saveUserMoney();
+            await saveUserMoney();
+            goBackToModeSelect();
+        }
+
+        function forceRandomPlay() {
+            if(myHand.length === 0 || board.length === 0) {
+                syncFirebaseState(); // 패스 처리
+                if(!isMultiplayer) { myTurn = false; setTimeout(playAI, 1000); }
+                return; 
             }
-            location.reload();
+            selectedHandIndex = Math.floor(Math.random() * myHand.length);
+            playCard(Math.floor(Math.random() * board.length));
         }
     </script>
 
-    <!-- Firebase Authentication SDK Integration -->
+    <!-- Firebase Authentication & Firestore SDK Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { 
@@ -1039,7 +921,7 @@
             getDoc 
         } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // Firebase 콘솔 키 설정
+        // Firebase 콘솔 키 설정 (proberb-game)
         const firebaseConfig = {
             apiKey: "AIzaSyD6u1lPNhuBlArv5YsSzaXoqTvrQICeGdo",
             authDomain: "proberb-game.firebaseapp.com",
@@ -1058,7 +940,7 @@
 
         let currentUser = null;
 
-        // 엽전 데이터 저장 함수
+        // 엽전 데이터 저장 함수 (글로벌 함수로 노출)
         window.saveUserMoney = async function() {
             if (!currentUser) return;
             try {
@@ -1068,9 +950,9 @@
                     name: typeof playerName !== 'undefined' ? playerName : '조선유생',
                     updatedAt: new Date()
                 }, { merge: true });
-                console.log("파이어베이스 엽전 데이터 저장 완료!");
+                console.log("파이어베이스 엽전 저장 완료!");
             } catch(e) {
-                console.error("파이어베이스 저장 오류:", e);
+                console.error("파이어베이스 엽전 저장 오류:", e);
             }
         };
 
@@ -1119,26 +1001,26 @@
             if (user) {
                 // 로그인 됨
                 if (user.isAnonymous) {
-                    statusText.innerText = "익명 유생 로그인됨";
-                    emailText.innerText = `UID: ${user.uid.substring(0, 8)}...`;
-                    userPhoto.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
-                    if (!playerNameInput.value) playerNameInput.value = "익명유생";
+                    if (statusText) statusText.innerText = "익명 유생 로그인됨";
+                    if (emailText) emailText.innerText = `UID: ${user.uid.substring(0, 8)}...`;
+                    if (userPhoto) userPhoto.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${user.uid}`;
+                    if (playerNameInput && !playerNameInput.value) playerNameInput.value = "익명유생";
                 } else {
-                    statusText.innerText = `${user.displayName || '구글 사용자'}님 환영합니다!`;
-                    emailText.innerText = user.email || '';
-                    if (user.photoURL) userPhoto.src = user.photoURL;
-                    if (user.displayName) {
+                    if (statusText) statusText.innerText = `${user.displayName || '구글 사용자'}님 환영합니다!`;
+                    if (emailText) emailText.innerText = user.email || '';
+                    if (userPhoto && user.photoURL) userPhoto.src = user.photoURL;
+                    if (playerNameInput && user.displayName) {
                         playerNameInput.value = user.displayName.substring(0, 8);
                     }
                 }
-                loginBtnGroup.classList.add('hidden');
-                btnLogout.classList.remove('hidden');
+                if (loginBtnGroup) loginBtnGroup.classList.add('hidden');
+                if (btnLogout) btnLogout.classList.remove('hidden');
 
-                // 파이어베이스에서 보유 엽전 불러오기
+                // 파이어베이스에서 저장된 엽전 데이터 불러오기
                 try {
                     const userRef = doc(db, "users", user.uid);
                     const docSnap = await getDoc(userRef);
-                    if (docSnap.exists() && docSnap.data().money) {
+                    if (docSnap.exists() && docSnap.data().money !== undefined) {
                         if (typeof userMoney !== 'undefined') userMoney = docSnap.data().money;
                         const moneyDisplay = document.getElementById("userMoneyDisplay");
                         if (moneyDisplay) moneyDisplay.innerText = docSnap.data().money;
@@ -1148,11 +1030,11 @@
                 }
             } else {
                 // 로그아웃 됨
-                statusText.innerText = "로그인 방식을 선택해주세요";
-                emailText.innerText = "익명 또는 구글 계정";
-                userPhoto.src = "https://api.dicebear.com/7.x/bottts/svg?seed=Joseon";
-                loginBtnGroup.classList.remove('hidden');
-                btnLogout.classList.add('hidden');
+                if (statusText) statusText.innerText = "로그인 방식을 선택해주세요";
+                if (emailText) emailText.innerText = "익명 또는 구글 계정";
+                if (userPhoto) userPhoto.src = "https://api.dicebear.com/7.x/bottts/svg?seed=Joseon";
+                if (loginBtnGroup) loginBtnGroup.classList.remove('hidden');
+                if (btnLogout) btnLogout.classList.add('hidden');
             }
         });
     </script>
