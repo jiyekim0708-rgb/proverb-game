@@ -11,7 +11,6 @@
     <style>
         body { font-family: 'Gowun Dodum', sans-serif; overflow: hidden; background-color: #1a1a2e; }
         
-        /* 퓨전 사극 배경 */
         .bg-lobby {
             background-image: url('https://images.unsplash.com/photo-1590211022204-c15c5448375b?auto=format&fit=crop&q=80&w=1920');
             background-size: cover; background-position: center;
@@ -23,12 +22,8 @@
             background-color: rgba(10, 20, 50, 0.85); background-blend-mode: multiply;
         }
 
-        /* 3D 입체 보드 컨테이너 */
-        .board-container {
-            perspective: 1200px; display: flex; justify-content: center; align-items: center;
-        }
+        .board-container { perspective: 1200px; display: flex; justify-content: center; align-items: center; }
 
-        /* 입체 보드판 */
         #boardArea {
             transform: rotateX(35deg); transform-style: preserve-3d;
             background: linear-gradient(135deg, rgba(20, 20, 50, 0.85), rgba(40, 20, 80, 0.85));
@@ -37,7 +32,6 @@
             border-radius: 20px; padding: 2rem; transition: all 0.5s ease;
         }
 
-        /* 카드 스타일 */
         .hwatu-card {
             width: 5.5rem; height: 8.2rem;
             background: linear-gradient(135deg, #ffffff 0%, #f0ebf8 100%);
@@ -83,7 +77,6 @@
         .panel-right { background: rgba(15, 52, 96, 0.75); border-left: 3px solid #ff9f43; backdrop-filter: blur(10px); }
         .profile-box { background: linear-gradient(90deg, rgba(0,0,0,0.8), rgba(20,20,40,0.8)); border-radius: 15px; padding: 0.75rem; color: white; border: 2px solid #00d2d3; box-shadow: 0 5px 15px rgba(0, 210, 211, 0.2); }
 
-        /* 타이머 경고 */
         @keyframes pulse-red {
             0% { background-color: rgba(238, 82, 83, 0.2); border-color: #ee5253; box-shadow: 0 0 10px rgba(238, 82, 83, 0.5); }
             50% { background-color: rgba(238, 82, 83, 0.6); border-color: #ff6b6b; box-shadow: 0 0 30px rgba(238, 82, 83, 0.9); }
@@ -91,7 +84,6 @@
         }
         .timer-danger { animation: pulse-red 1s infinite; color: #ff9f43 !important; }
 
-        /* 화려한 매칭 팝업 이펙트 최적화 (부드럽게 4초 지속) */
         #flashyMatchPopup { pointer-events: none; }
         #flashyMatchPopup.active .popup-text { animation: smooth-pop 4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes smooth-pop {
@@ -157,7 +149,6 @@
                 </div>
             </div>
 
-            <!-- 서당 단계 선택 -->
             <div class="grid grid-cols-3 gap-4 mb-6">
                 <div onclick="selectRoomTier(100)" id="tier1" class="border-4 border-yellow-500 bg-yellow-900/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg relative overflow-hidden">
                     <div class="text-xl font-bold text-yellow-300">1. 초급 서당</div>
@@ -341,7 +332,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // window 객체에 바인딩
         window.db = db; window.collection = collection; window.addDoc = addDoc;
         window.getDocs = getDocs; window.doc = doc; window.setDoc = setDoc; window.getDoc = getDoc;
         window.onSnapshot = onSnapshot; window.updateDoc = updateDoc; window.query = query;
@@ -539,7 +529,6 @@
             clearInterval(timerInterval);
             if(unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
             if(currentRoomId && isMultiplayer) {
-                // 방 나갈때 삭제 처리 (단순화)
                 window.deleteDoc(window.doc(window.db, "rooms", currentRoomId)).catch(e=>console.log(e));
             }
             
@@ -550,7 +539,13 @@
             document.getElementById("modeScreen").classList.remove("hidden");
             document.getElementById("myCollectionArea").innerHTML = `<p class="text-gray-400 ml-2">비어있음</p>`;
             document.getElementById("oppCollectionArea").innerHTML = `<p class="text-gray-400 ml-2">비어있음</p>`;
+            
+            // UI 상태 초기화
             myScore = 0; oppScore = 0;
+            document.getElementById("myScore").innerText = "0";
+            document.getElementById("oppScore").innerText = "0";
+            document.getElementById("deckCount").innerText = `남은 패: 0`;
+            
             usedMagnifier = false; usedFan = false;
             document.getElementById(`btnMagnifier`).classList.remove("opacity-40");
             document.getElementById(`btnFan`).classList.remove("opacity-40");
@@ -574,19 +569,12 @@
             try {
                 const snap = await window.getDocs(q);
                 if(!snap.empty) {
-                    // 방 존재: Guest로 참여
-                    const roomDoc = snap.docs[0];
-                    currentRoomId = roomDoc.id;
+                    const roomDoc = snap.docs[0]; currentRoomId = roomDoc.id;
                     isHost = false; myTurn = false;
-                    await window.updateDoc(window.doc(window.db, "rooms", currentRoomId), {
-                        guestName: myName, status: "playing"
-                    });
+                    await window.updateDoc(window.doc(window.db, "rooms", currentRoomId), { guestName: myName, status: "playing" });
                     document.getElementById("oppName").innerText = roomDoc.data().hostName;
-                    statusEl.classList.add("hidden");
-                    startGameUI();
-                    listenToRoom();
+                    statusEl.classList.add("hidden"); startGameUI(); listenToRoom();
                 } else {
-                    // 방 생성: Host로 대기
                     isHost = true; myTurn = true;
                     const newRoom = await window.addDoc(roomsRef, {
                         hostName: myName, guestName: "", status: "waiting", turn: "host",
@@ -602,19 +590,14 @@
 
         function listenToRoom() {
             unsubscribeRoom = window.onSnapshot(window.doc(window.db, "rooms", currentRoomId), (docSnap) => {
-                if(!docSnap.exists()) {
-                    showToast("방이 종료되었습니다."); goBackToModeSelect(); return;
-                }
+                if(!docSnap.exists()) { showToast("방이 종료되었습니다."); goBackToModeSelect(); return; }
                 const data = docSnap.data();
 
-                // 호스트인데 게스트가 들어오면 게임 세팅 시작
                 if(isHost && data.status === "playing" && deckBoard.length === 0) {
                     document.getElementById("oppName").innerText = data.guestName;
                     document.getElementById("matchingStatus").classList.add("hidden");
-                    setupNewGameData(); // 호스트가 덱 생성해서 쏨
-                    startGameUI();
+                    setupNewGameData(); startGameUI();
                 }
-                // 게스트 & 호스트 데이터 싱크
                 if(data.status === "playing" && data.deckBoard && data.deckBoard.length > 0) {
                     board = data.board;
                     myHand = isHost ? data.hostHand : data.guestHand;
@@ -626,12 +609,12 @@
 
                     if(data.lastAction.startsWith("MATCH:")) {
                         const word = data.lastAction.split(":")[1];
-                        if(myTurn) addOppCollection(word); // 방금 상대가 맞춘 것
+                        if(myTurn) addOppCollection(word);
                     }
 
                     renderGame();
                     if(!isStudying) {
-                        checkGameEnd(); 
+                        if(checkGameEnd()) return;
                         startTimer();
                     }
                 }
@@ -642,15 +625,29 @@
             if(!isMultiplayer || !currentRoomId) return;
             const updateData = {
                 board: board, deckHand: deckHand, deckBoard: deckBoard,
-                hostHand: isHost ? myHand : oppHand,
-                guestHand: isHost ? oppHand : myHand,
-                hostScore: isHost ? myScore : oppScore,
-                guestScore: isHost ? oppScore : myScore,
-                turn: myTurn ? (isHost ? "guest" : "host") : (isHost ? "host" : "guest"), // 턴 넘기기
+                hostHand: isHost ? myHand : oppHand, guestHand: isHost ? oppHand : myHand,
+                hostScore: isHost ? myScore : oppScore, guestScore: isHost ? oppScore : myScore,
+                turn: myTurn ? (isHost ? "guest" : "host") : (isHost ? "host" : "guest"),
                 lastAction: matchWord ? `MATCH:${matchWord}` : `PASS:${Date.now()}`
             };
-            myTurn = false; // 보낸 즉시 내 턴 종료
+            myTurn = false;
             await window.updateDoc(window.doc(window.db, "rooms", currentRoomId), updateData);
+        }
+
+        // ------------------ 싱글(AI) 대전 전용 턴 제어 로직 ------------------
+        function endUserTurnAI() {
+            if(checkGameEnd()) return;
+            myTurn = false;
+            renderGame();
+            startTimer();
+            setTimeout(playAI, 1500); // 1.5초 후 조선비 출격
+        }
+
+        function endAITurnAI() {
+            if(checkGameEnd()) return;
+            myTurn = true;
+            renderGame();
+            startTimer();
         }
 
         // ------------------ 게임 공통 로직 ------------------
@@ -675,8 +672,7 @@
                 deckHand.push({ id: p.id, type: 'p1', text: p.p1, full: p.full, meaning: p.meaning });
                 deckBoard.push({ id: p.id, type: 'p2', text: p.p2, full: p.full, meaning: p.meaning });
             });
-            deckHand.sort(() => Math.random() - 0.5);
-            deckBoard.sort(() => Math.random() - 0.5);
+            deckHand.sort(() => Math.random() - 0.5); deckBoard.sort(() => Math.random() - 0.5);
             myHand = deckHand.splice(0, 5); oppHand = deckHand.splice(0, 5);
             
             fillUniqueBoard(myTurn ? myHand : oppHand);
@@ -684,13 +680,12 @@
             if(isMultiplayer && isHost) syncFirebaseState();
         }
 
-        // 핵심 수정: 바닥 중복패 차단 + 타겟 손패 1개 매칭 보장
+        // 바닥 중복패 차단 + 타겟 손패 매칭 보장
         function fillUniqueBoard(targetHand) {
             while(board.length < 8 && deckBoard.length > 0) {
-                // 중복 안되는 카드 찾기
                 let uniqueIdx = deckBoard.findIndex(dc => !board.some(bc => bc.id === dc.id));
                 if(uniqueIdx !== -1) board.push(deckBoard.splice(uniqueIdx, 1)[0]);
-                else break; // 남은 덱이 모두 이미 바닥에 있는 ID라면 중단
+                else break;
             }
 
             if (!targetHand || targetHand.length === 0 || board.length === 0) return;
@@ -749,11 +744,12 @@
                 if(deckHand.length > 0) myHand.push(deckHand.pop());
                 fillUniqueBoard(oppHand);
                 selectedHandIndex = null;
+                renderGame();
                 
                 setTimeout(() => {
                     openStudyModal(handCard, () => {
                         if(isMultiplayer) syncFirebaseState(handCard.full);
-                        else { myTurn = false; renderGame(); checkGameEnd(); startTimer(); setTimeout(playAI, 1500); }
+                        else endUserTurnAI();
                     });
                 }, 3800);
 
@@ -761,7 +757,7 @@
                 playSound('mismatch'); showToast("짝이 맞지 않습니다!");
                 selectedHandIndex = null; renderGame();
                 if(isMultiplayer) syncFirebaseState();
-                else { myTurn = false; setTimeout(playAI, 1200); }
+                else endUserTurnAI();
             }
         }
 
@@ -794,49 +790,81 @@
             fillUniqueBoard(myHand); showToast("🌪️ 바닥 리셋!"); renderGame();
         }
 
+        let onStudyCompleteCallback = null;
+
         function openStudyModal(card, onComplete) {
             isStudying = true;
             document.getElementById("modalProverb").innerText = card.full;
             document.getElementById("modalMeaning").innerText = card.meaning;
             document.getElementById("studyModal").classList.remove("hidden");
+            
+            onStudyCompleteCallback = onComplete;
             let count = 10; document.getElementById("modalTimer").innerText = count;
-            studyModalInterval = setInterval(() => { count--; document.getElementById("modalTimer").innerText = count; if(count <= 0) closeStudyModal(onComplete); }, 1000);
-            document.getElementById("studyModal").onclick = () => closeStudyModal(onComplete); // Click to skip
+            
+            clearInterval(studyModalInterval);
+            studyModalInterval = setInterval(() => { 
+                count--; document.getElementById("modalTimer").innerText = count; 
+                if(count <= 0) closeStudyModal(); 
+            }, 1000);
         }
 
-        function closeStudyModal(cb) {
+        function closeStudyModal() {
             playSound('select'); clearInterval(studyModalInterval);
             document.getElementById("studyModal").classList.add("hidden");
-            isStudying = false; if(cb) cb(); else if (onStudyCompleteCallback) { onStudyCompleteCallback(); onStudyCompleteCallback=null; }
+            isStudying = false; 
+            if(onStudyCompleteCallback) { const cb = onStudyCompleteCallback; onStudyCompleteCallback = null; cb(); }
         }
 
+        // 독립된 완벽한 조선비(AI) 구동 엔진
         function playAI() {
-            let matched = false; let matchedCard = null;
+            if (myTurn || checkGameEnd()) return; // 방어 코드
+
+            let matchedCard = null;
+            let handIdx = -1; let boardIdx = -1;
+
+            // 바닥에 짝이 있는지 탐색
             for(let i=0; i<oppHand.length; i++) {
                 for(let j=0; j<board.length; j++) {
                     if(oppHand[i].id === board[j].id) {
-                        playSound('match'); oppScore += 10; matchedCard = oppHand[i];
-                        showFlashyPopup(matchedCard.full); speakProverb(matchedCard.full); addOppCollection(matchedCard.full);
-                        oppHand.splice(i, 1); board.splice(j, 1);
-                        if(deckHand.length > 0) oppHand.push(deckHand.pop());
-                        fillUniqueBoard(myHand); matched = true; break;
+                        handIdx = i; boardIdx = j; break;
                     }
                 }
-                if(matched) break;
+                if(handIdx !== -1) break;
             }
-            if(matched) {
-                setTimeout(() => { openStudyModal(matchedCard, () => { myTurn = true; renderGame(); checkGameEnd(); startTimer(); }); }, 3800);
+
+            if(handIdx !== -1) {
+                // 매칭 성공 시
+                matchedCard = oppHand[handIdx];
+                playSound('match'); oppScore += 10;
+                showFlashyPopup(matchedCard.full); speakProverb(matchedCard.full); addOppCollection(matchedCard.full);
+                
+                oppHand.splice(handIdx, 1); board.splice(boardIdx, 1);
+                if(deckHand.length > 0) oppHand.push(deckHand.pop());
+                fillUniqueBoard(myHand); 
+                renderGame();
+                
+                setTimeout(() => {
+                    openStudyModal(matchedCard, () => {
+                        endAITurnAI(); // 모달 닫힌 후 확실히 내 턴으로 복귀
+                    });
+                }, 3800);
             } else {
-                playSound('mismatch'); showToast("조선비 패스.");
-                myTurn = true; renderGame(); checkGameEnd(); startTimer();
+                // 매칭 실패 시
+                playSound('mismatch'); showToast("조선비가 짝을 찾지 못해 패스합니다!");
+                setTimeout(endAITurnAI, 1200); // 짧은 딜레이 후 바로 내 턴
             }
         }
 
-        // 핵심 수정: 종료 및 승패 조건 로직
+        // 종료 및 승패 조건 로직
         function checkGameEnd() {
-            // 패가 더 이상 없고 낼 것도 없을 때
-            if(myHand.length === 0 && oppHand.length === 0 && deckBoard.length === 0) {
-                clearInterval(timerInterval); finalizeGame(); return true;
+            // 덱이 다 떨어지고 양쪽 손패에서 바닥과 매칭할 수 있는 카드가 하나도 없을 때 종료
+            if(deckBoard.length === 0) {
+                let myCanMatch = myHand.some(hc => board.some(bc => bc.id === hc.id));
+                let oppCanMatch = oppHand.some(hc => board.some(bc => bc.id === hc.id));
+                
+                if(!myCanMatch && !oppCanMatch) {
+                    clearInterval(timerInterval); finalizeGame(); return true;
+                }
             }
             return false;
         }
@@ -853,13 +881,11 @@
 
             let resultMsg = "";
             if (myScore > oppScore) {
-                // 승리
                 emoji.innerText = "👑"; title.innerText = "승리 대감!";
                 resultMsg = `[${myScore} : ${oppScore}]\n판돈 ${selectedTierStake}냥 획득! 퀴즈를 맞추면 보너스!`;
                 userMoney += selectedTierStake;
                 quizArea.classList.remove("hidden");
                 
-                // 퀴즈 렌더링
                 const q = { question: "지호가 평소에는 공부를 안 하다가, 시험 전날 허둥지둥하고 있습니다. 이 상황에 어울리는 속담은?", options: ["소 잃고 외양간 고친다", "누워서 떡 먹기", "금강산도 식후경"], correct: 0 };
                 document.getElementById("finaleQuestion").innerText = q.question;
                 const optEl = document.getElementById("finaleOptions"); optEl.innerHTML = "";
@@ -867,12 +893,10 @@
                     optEl.innerHTML += `<button onclick="answerFinale(${idx === q.correct})" class="bg-yellow-900/50 hover:bg-yellow-800/80 border-2 border-yellow-500 p-4 rounded-xl text-xl font-bold text-yellow-100 shadow transition">${idx + 1}. ${opt}</button>`;
                 });
             } else if (myScore < oppScore) {
-                // 패배
                 emoji.innerText = "😢"; title.innerText = "패배...";
                 resultMsg = `[${myScore} : ${oppScore}]\n판돈 ${selectedTierStake}냥을 잃었습니다.`;
                 userMoney -= selectedTierStake; btnReturn.classList.remove("hidden");
             } else {
-                // 무승부
                 emoji.innerText = "🤝"; title.innerText = "무승부";
                 resultMsg = `[${myScore} : ${oppScore}]\n판돈을 돌려받았습니다.`;
                 btnReturn.classList.remove("hidden");
@@ -889,13 +913,14 @@
                 playSound('mismatch'); alert(`오답입니다!\n보너스를 놓쳤습니다.`);
             }
             await saveUserMoney();
-            goBackToModeSelect();
+            goBackToModeSelect(); // 다시 방 고르기 화면으로 매끄럽게 복귀
         }
 
+        // 타임아웃 강제 턴 넘김
         function forceRandomPlay() {
             if(myHand.length === 0 || board.length === 0) {
-                syncFirebaseState(); // 패스 처리
-                if(!isMultiplayer) { myTurn = false; setTimeout(playAI, 1000); }
+                if(isMultiplayer) syncFirebaseState(); 
+                else endUserTurnAI();
                 return; 
             }
             selectedHandIndex = Math.floor(Math.random() * myHand.length);
