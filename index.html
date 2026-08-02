@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퓨전 사극 속담 짝패 대전 - 3D 아케이드 에디션</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PeerJS for Real-time Multiplayer -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- 고운돋움 폰트 적용 -->
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Gowun Dodum', sans-serif; overflow: hidden; background-color: #1a1a2e; }
+        
+        /* 퓨전 사극 배경: 로비 화면 (궁궐 야경 느낌의 고화질 이미지) */
+        .bg-lobby {
+            background-image: url('https://images.unsplash.com/photo-1590211022204-c15c5448375b?auto=format&fit=crop&q=80&w=1920');
+            background-size: cover; background-position: center;
+            background-color: rgba(20, 10, 40, 0.7); background-blend-mode: multiply;
+        }
+
+        /* 퓨전 사극 배경: 게임 화면 (전통적인 구름/달빛 느낌) */
+        .bg-game {
+            background-image: url('https://images.unsplash.com/photo-1542640244-7e672d6cb466?auto=format&fit=crop&q=80&w=1920');
+            background-size: cover; background-position: center;
+            background-color: rgba(10, 20, 50, 0.85); background-blend-mode: multiply;
+        }
+
+        /* 3D 입체 보드 컨테이너 */
+        .board-container {
+            perspective: 1200px; display: flex; justify-content: center; align-items: center;
+        }
+
+        /* 입체 보드판 (Isometric 느낌) */
+        #boardArea {
+            transform: rotateX(35deg); transform-style: preserve-3d;
+            background: linear-gradient(135deg, rgba(20, 20, 50, 0.85), rgba(40, 20, 80, 0.85));
+            border: 4px solid #ffd700;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.9), inset 0 0 30px rgba(255,215,0,0.2);
+            border-radius: 20px; padding: 2rem; transition: all 0.5s ease;
+        }
+
+        /* 퓨전 캐주얼 카드 스타일 (광택 + 먹물 테두리) */
+        .hwatu-card {
+            width: 5.5rem; height: 8.2rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f0ebf8 100%);
+            border: 3px solid #2d3436; border-radius: 12px;
+            box-shadow: 0 10px 15px rgba(0,0,0,0.4), inset 0 2px 5px rgba(255,255,255,1);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; font-weight: bold; font-size: 1.1rem; padding: 0.3rem;
+            cursor: pointer; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            position: relative; user-select: none;
+            transform: translateZ(5px);
+        }
+
+        /* 마우스 호버 시 튀어오르는 통통 튀는 효과 */
+        .hwatu-card:hover { 
+            transform: translateZ(30px) scale(1.15) translateY(-10px); 
+            border-color: #00d2d3; 
+            box-shadow: 0 20px 25px rgba(0, 210, 211, 0.5), inset 0 2px 10px rgba(255,255,255,1);
+            z-index: 20;
+        }
+        .hwatu-card.selected { 
+            border-color: #ff9f43; 
+            box-shadow: 0 0 30px rgba(255, 159, 67, 0.9); 
+            transform: translateZ(40px) scale(1.2) translateY(-15px); 
+            z-index: 25;
+        }
+        
+        .hwatu-card.hint-highlight { animation: pulse-neon 0.8s infinite alternate; }
+        @keyframes pulse-neon {
+            0% { border-color: #ff9f43; box-shadow: 0 0 15px #ff9f43; transform: translateZ(10px) scale(1.05); }
+            100% { border-color: #00d2d3; box-shadow: 0 0 35px #00d2d3; transform: translateZ(20px) scale(1.15); }
+        }
+
+        /* 카드 뒷면 (네온 퓨전 문양) */
+        .hwatu-card.back {
+            background: linear-gradient(135deg, #1e3a8a, #4c1d95);
+            background-image: radial-gradient(circle, rgba(255,255,255,0.1) 10%, transparent 20%);
+            background-size: 15px 15px; border-color: #111; color: transparent;
+        }
+        .hwatu-card.back:hover { transform: translateZ(10px); border-color: #333; box-shadow: 0 10px 15px rgba(0,0,0,0.4); }
+
+        .card-text { z-index: 10; word-break: keep-all; line-height: 1.3; color: #2d3436; text-shadow: 1px 1px 0px rgba(255,255,255,0.8); }
+        
+        /* 타입 뱃지 (앞구절/뒷구절) */
+        .card-type { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; color: white; z-index: 10; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .type-p1 { background: linear-gradient(90deg, #ff6b6b, #ee5253); }
+        .type-p2 { background: linear-gradient(90deg, #10ac84, #01a3a4); }
+
+        .panel-right { background: rgba(15, 52, 96, 0.75); border-left: 3px solid #ff9f43; backdrop-filter: blur(10px); }
+        .profile-box { background: linear-gradient(90deg, rgba(0,0,0,0.8), rgba(20,20,40,0.8)); border-radius: 15px; padding: 0.75rem; color: white; border: 2px solid #00d2d3; box-shadow: 0 5px 15px rgba(0, 210, 211, 0.2); }
+
+        /* 타이머 경고 */
+        @keyframes pulse-red {
+            0% { background-color: rgba(238, 82, 83, 0.2); border-color: #ee5253; box-shadow: 0 0 10px rgba(238, 82, 83, 0.5); }
+            50% { background-color: rgba(238, 82, 83, 0.6); border-color: #ff6b6b; box-shadow: 0 0 30px rgba(238, 82, 83, 0.9); }
+            100% { background-color: rgba(238, 82, 83, 0.2); border-color: #ee5253; box-shadow: 0 0 10px rgba(238, 82, 83, 0.5); }
+        }
+        .timer-danger { animation: pulse-red 1s infinite; color: #ff9f43 !important; }
+
+        /* 화려한 매칭 팝업 이펙트 (4초 지속으로 연장) */
+        #flashyMatchPopup { pointer-events: none; }
+        #flashyMatchPopup.active .popup-text { animation: pop-in-out 4s forwards; }
+        @keyframes pop-in-out {
+            0% { transform: scale(0.1); opacity: 0; filter: blur(10px); }
+            10% { transform: scale(1.2); opacity: 1; filter: blur(0px); text-shadow: 0 0 40px #ff9f43, 0 0 80px #f368e0; }
+            85% { transform: scale(1); opacity: 1; text-shadow: 0 0 20px #ff9f43; }
+            100% { transform: scale(1.5); opacity: 0; filter: blur(5px); }
+        }
+
+        #toast {
+            visibility: hidden; min-width: 300px; background: linear-gradient(90deg, #f368e0, #ff9f43); color: #fff;
+            text-align: center; border-radius: 30px; padding: 15px 25px; position: fixed;
+            z-index: 100; left: 50%; transform: translateX(-50%); top: 30px; font-size: 1.3rem; font-weight: bold; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.3s, fadeout 0.3s 2.5s; }
+        @keyframes fadein { from {top: 0; opacity: 0;} to {top: 30px; opacity: 1;} }
+        @keyframes fadeout { from {top: 30px; opacity: 1;} to {top: 0; opacity: 0;} }
+    </style>
+</head>
+<body class="w-screen h-screen flex justify-center items-center select-none text-gray-100 bg-lobby" id="mainBody">
+
+    <!-- 1. 로비 화면 -->
+    <div id="lobbyScreen" class="absolute inset-0 flex flex-col items-center justify-center z-40">
+        <div class="bg-black/60 backdrop-blur-md p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center max-w-md w-full border-2 border-yellow-400/50">
+            <!-- 제목 변경: 📜 속담 대전 -->
+            <h1 class="text-4xl sm:text-5xl whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-5 font-bold drop-shadow-lg">📜 속담 대전</h1>
+            <p class="text-gray-200 mb-6 text-lg font-bold">서당에 입장하기 전, 이름(닉네임)을 적어주세요.</p>
+            <input type="text" id="playerName" placeholder="이름을 입력하세요" class="w-full p-4 border-2 border-yellow-400/50 rounded-xl mb-6 text-center text-2xl font-bold focus:outline-none focus:border-yellow-300 bg-black/50 text-white placeholder-gray-400 transition" maxlength="8">
+            <button onclick="goToModeSelect()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-400 hover:to-orange-400 text-white p-4 rounded-xl text-2xl font-bold transition shadow-[0_0_20px_rgba(245,158,11,0.5)]">입장하기</button>
+        </div>
+    </div>
+
+    <!-- 2. 서당(방) 등급 선택 화면 -->
+    <div id="modeScreen" class="absolute inset-0 flex flex-col items-center justify-center z-30 hidden">
+        <div class="bg-black/60 backdrop-blur-md p-8 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center max-w-3xl w-full border-2 border-cyan-400/50">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl text-cyan-300 font-bold drop-shadow-md" id="welcomeMsg">환영합니다!</h2>
+                <div class="bg-yellow-900/70 border-2 border-yellow-500 px-4 py-2 rounded-2xl text-xl font-bold text-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                    🪙 보유 엽전: <span id="userMoneyDisplay">1000</span>냥
+                </div>
+            </div>
+
+            <!-- 서당 단계 선택 -->
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <div onclick="selectRoomTier(100)" id="tier1" class="border-4 border-yellow-500 bg-yellow-900/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg relative overflow-hidden">
+                    <div class="text-xl font-bold text-yellow-300">1. 초급 서당</div>
+                    <div class="text-xs text-gray-300 mt-1">입장 제한: 없음</div>
+                    <div class="text-sm font-bold text-yellow-400 mt-2 bg-black/40 rounded py-1">참여 엽전: 100냥</div>
+                </div>
+                <div onclick="selectRoomTier(1000)" id="tier2" class="border-2 border-gray-500 bg-gray-800/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg opacity-60">
+                    <div class="text-xl font-bold text-blue-300">2. 중급 서당</div>
+                    <div class="text-xs text-gray-400 mt-1">입장 제한: 1,000냥 이상</div>
+                    <div class="text-sm font-bold text-blue-400 mt-2 bg-black/40 rounded py-1">참여 엽전: 500냥</div>
+                </div>
+                <div onclick="selectRoomTier(10000)" id="tier3" class="border-2 border-gray-500 bg-gray-800/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg opacity-60">
+                    <div class="text-xl font-bold text-purple-300">3. 최고수 서당</div>
+                    <div class="text-xs text-gray-400 mt-1">입장 제한: 10,000냥 이상</div>
+                    <div class="text-sm font-bold text-purple-400 mt-2 bg-black/40 rounded py-1">참여 엽전: 2,000냥</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-4">
+                <button onclick="startAIGame()" class="bg-gradient-to-r from-blue-700 to-blue-900 border-2 border-blue-400 text-white p-5 rounded-2xl hover:from-blue-600 hover:to-blue-800 transition shadow-[0_0_20px_rgba(59,130,246,0.5)]">
+                    <div class="text-2xl font-bold mb-1">🤖 혼자 연습하기</div>
+                    <div class="text-sm font-bold text-blue-200">AI 대전 (엽전 차감 없음)</div>
+                </button>
+                <div class="bg-gradient-to-r from-green-700 to-green-900 border-2 border-green-400 p-5 rounded-2xl flex flex-col items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.5)]">
+                    <div class="text-xl font-bold text-green-200 mb-2">🤝 친구와 실시간 대결</div>
+                    <button onclick="createRoom()" id="btnCreate" class="bg-green-500 text-white px-6 py-2 rounded-xl w-full text-lg font-bold hover:bg-green-400 transition shadow-lg">방 만들기</button>
+                    <div id="roomCodeDisplay" class="hidden mt-2 text-center w-full">
+                        <span class="text-xs text-gray-300 font-bold">방 번호: </span>
+                        <span class="text-3xl font-bold tracking-widest text-white bg-black/60 rounded-lg px-4 py-1 border border-green-400" id="hostPin">----</span>
+                        <p class="text-xs text-green-300 mt-2 font-bold animate-pulse">친구가 방 번호로 들어오는 중...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-orange-900/70 border-2 border-orange-500 p-4 rounded-2xl flex items-center justify-between shadow-lg max-w-md mx-auto">
+                <span class="text-lg font-bold text-orange-300">방 번호로 입장:</span>
+                <input type="text" id="joinPin" placeholder="4자리" maxlength="4" class="w-28 text-center p-2 border-2 border-orange-400 rounded-xl text-xl font-bold tracking-widest focus:outline-none bg-black/60 text-white">
+                <button onclick="joinRoom()" class="bg-orange-600 text-white px-5 py-2 rounded-xl text-lg font-bold hover:bg-orange-500 transition shadow">입장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 메인 게임 화면 -->
+    <div id="gameScreen" class="w-full h-full flex hidden relative overflow-hidden bg-game">
+        
+        <!-- 중앙 게임 보드 영역 -->
+        <div class="flex-1 flex flex-col justify-between relative p-6">
+            
+            <!-- 상단: 상대방 영역 -->
+            <div class="flex items-start justify-between w-full z-10">
+                <div class="profile-box w-64 flex items-center gap-3" id="oppProfile">
+                    <div class="text-4xl">🧑‍🏫</div>
+                    <div>
+                        <div class="text-xs text-cyan-300 font-bold">상대방</div>
+                        <div id="oppName" class="font-bold text-xl text-white">조선비 (AI)</div>
+                        <div class="text-yellow-400 font-bold text-base">점수: <span id="oppScore">0</span>점</div>
+                    </div>
+                </div>
+                <div id="oppHandArea" class="flex gap-2 mt-1"></div>
+            </div>
+
+            <!-- 중앙: 3D 입체 바닥 패 & 덱 -->
+            <div class="flex-1 board-container relative mt-10 mb-10">
+                <!-- 짝패 더미 -->
+                <div class="absolute left-10 top-1/2 transform -translate-y-1/2 w-20 h-28 z-20" style="transform-style: preserve-3d; transform: translateZ(50px);">
+                    <div class="hwatu-card back absolute top-2 left-2 shadow-[0_10px_10px_rgba(0,0,0,0.5)]"></div>
+                    <div class="hwatu-card back absolute top-1 left-1"></div>
+                    <div class="hwatu-card back absolute top-0 left-0 flex items-center justify-center border-4 border-yellow-500">
+                        <span class="text-white text-2xl font-bold drop-shadow">짝패<br>더미</span>
+                    </div>
+                    <div id="deckCount" class="absolute -bottom-8 left-0 w-full text-center text-yellow-300 text-sm font-bold bg-black/80 rounded-full py-1 border border-yellow-500/50 shadow-[0_0_10px_rgba(255,215,0,0.5)]">남은 패: 0</div>
+                </div>
+                
+                <!-- 바닥 패 8장 고정 (항상 뒷구절) -->
+                <div id="boardArea" class="grid grid-cols-4 gap-6 ml-24"></div>
+            </div>
+
+            <!-- 하단: 내 영역 -->
+            <div class="flex items-end justify-between w-full z-10">
+                <div class="profile-box w-64 flex items-center gap-3 border-green-400 shadow-[0_0_20px_rgba(74,222,128,0.3)]" id="myProfile">
+                    <div class="text-4xl">🧒</div>
+                    <div>
+                        <div class="text-xs text-green-300 font-bold">나의 서당</div>
+                        <div id="myNameDisplay" class="font-bold text-xl text-white">플레이어</div>
+                        <div class="text-yellow-400 font-bold text-base">점수: <span id="myScore">0</span>점</div>
+                    </div>
+                </div>
+                <!-- 내 손패 (항상 앞구절) -->
+                <div id="myHandArea" class="flex gap-4 mb-2"></div>
+            </div>
+        </div>
+
+        <!-- 우측 사이드 패널 -->
+        <div class="w-80 panel-right flex flex-col p-4 z-20">
+            <!-- 타이머 -->
+            <div id="timerBox" class="bg-black/70 rounded-2xl p-4 mb-4 border-2 border-gray-500 shadow-lg relative overflow-hidden transition-colors">
+                <h3 class="font-bold text-white text-base text-center mb-1">⏳ 제한시간 (20초)</h3>
+                <div class="text-4xl text-center font-bold text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" id="timerText">대기 중</div>
+                <div class="w-full bg-gray-800 h-3 mt-3 rounded-full overflow-hidden border border-gray-600">
+                    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 h-full rounded-full transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(245,158,11,0.8)]" id="timerBar" style="width: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- 보패 아이템 -->
+            <div class="bg-black/70 rounded-2xl p-4 mb-4 border-2 border-cyan-500/50 shadow-lg">
+                <h3 class="font-bold text-cyan-300 text-lg text-center mb-3 border-b border-cyan-500/30 pb-2 drop-shadow">🔮 신통방통 보패</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="useMagnifierItem()" id="btnMagnifier" class="bg-gradient-to-br from-yellow-400 to-orange-500 hover:from-yellow-300 hover:to-orange-400 text-black rounded-xl p-2 font-bold text-sm shadow-[0_0_15px_rgba(245,158,11,0.5)] transition flex flex-col items-center">
+                        <span class="text-lg">🔍 돋보기</span>
+                        <span class="text-[0.65rem] opacity-80 mt-1">짝패 힌트 (1회)</span>
+                    </button>
+                    <button onclick="useFanItem()" id="btnFan" class="bg-gradient-to-br from-blue-400 to-cyan-500 hover:from-blue-300 hover:to-cyan-400 text-black rounded-xl p-2 font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.5)] transition flex flex-col items-center">
+                        <span class="text-lg">🌪️ 부채</span>
+                        <span class="text-[0.65rem] opacity-80 mt-1">바닥 리셋 (1회)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 수집 속담 리스트 -->
+            <div class="flex-1 bg-black/60 rounded-2xl p-4 flex flex-col border border-white/10 overflow-hidden shadow-inner">
+                <h3 class="font-bold text-green-400 text-base mb-3 border-b border-white/20 pb-2">📜 수집한 짝패</h3>
+                <div class="flex-1 overflow-y-auto space-y-4 pr-2 text-xs custom-scrollbar">
+                    <div>
+                        <span class="text-green-300 font-bold block mb-2 text-sm bg-green-900/50 px-2 py-1 rounded">🟢 나의 보관함</span>
+                        <div id="myCollectionArea" class="space-y-1.5"><p class="text-gray-400 ml-2">비어있음</p></div>
+                    </div>
+                    <div class="border-t border-white/10 pt-3">
+                        <span class="text-pink-300 font-bold block mb-2 text-sm bg-pink-900/50 px-2 py-1 rounded">🔴 상대 보관함</span>
+                        <div id="oppCollectionArea" class="space-y-1.5"><p class="text-gray-400 ml-2">비어있음</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-3">
+                <button onclick="sendEmote('얼쑤!')" class="bg-yellow-500/30 hover:bg-yellow-500/50 border border-yellow-500 text-yellow-300 rounded-xl p-2 font-bold text-base transition">🎉 얼쑤!</button>
+                <button onclick="sendEmote('에잇!')" class="bg-red-500/30 hover:bg-red-500/50 border border-red-500 text-red-300 rounded-xl p-2 font-bold text-base transition">😤 에잇!</button>
+                <button onclick="location.reload()" class="col-span-2 bg-gray-800 hover:bg-gray-700 text-white rounded-xl p-2 font-bold text-base border border-gray-500 transition mt-1">🚪 서당 나가기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 화려한 매칭 팝업 (해파리 폭발 뷰) -->
+    <div id="flashyMatchPopup" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 transition-opacity duration-300">
+        <div class="popup-text text-center">
+            <div class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-pink-400 to-purple-500 drop-shadow-[0_0_30px_rgba(255,255,255,1)]">✨ 속담 완성! ✨</div>
+            <div id="flashyProverbText" class="text-4xl font-bold text-white mt-4 drop-shadow-[0_0_10px_rgba(0,0,0,0.8)]">속담 텍스트</div>
+        </div>
+    </div>
+
+    <!-- 10초 학습 모달창 -->
+    <div id="studyModal" class="absolute inset-0 bg-black/90 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+        <div class="bg-gradient-to-br from-indigo-900 to-purple-900 p-8 rounded-3xl max-w-lg w-full border-4 border-fuchsia-500 text-center shadow-[0_0_50px_rgba(217,70,239,0.5)] relative">
+            <div class="text-5xl mb-4 animate-bounce">📜</div>
+            <h3 id="modalProverb" class="text-3xl font-bold text-white mb-6 drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">속담 이름</h3>
+            <div class="bg-black/50 p-5 rounded-2xl border border-white/20 mb-6 text-left shadow-inner">
+                <p class="font-bold text-fuchsia-300 mb-2">📖 뜻풀이:</p>
+                <p id="modalMeaning" class="text-gray-100 font-bold text-lg mb-2 leading-relaxed">뜻 내용...</p>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-bold text-fuchsia-400 animate-pulse bg-black/60 px-3 py-1 rounded-full"><span id="modalTimer">10</span>초 뒤 닫힘</span>
+                <button onclick="closeStudyModal()" class="bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white px-6 py-3 rounded-xl font-bold text-lg shadow-[0_0_15px_rgba(217,70,239,0.5)] transition">[다 읽었어요!]</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 피날레 퀴즈 모달 -->
+    <div id="finaleModal" class="absolute inset-0 bg-black/90 flex items-center justify-center z-50 hidden backdrop-blur-sm">
+        <div class="bg-gradient-to-br from-yellow-900 to-orange-900 p-8 rounded-3xl max-w-xl w-full border-4 border-yellow-400 text-center shadow-[0_0_50px_rgba(250,204,21,0.5)]">
+            <div class="text-6xl mb-4">👑</div>
+            <h2 class="text-3xl font-bold text-yellow-300 mb-3 drop-shadow">최종 관문: 어사화 퀴즈!</h2>
+            <p class="text-gray-200 mb-6 font-bold">마지막 상황 문제를 맞추고 엽전을 두 배로 획득하세요!</p>
+            <div class="bg-black/60 p-6 rounded-2xl border border-yellow-500/50 mb-6 text-left">
+                <p class="font-bold text-white text-lg mb-2 leading-relaxed" id="finaleQuestion">질문 내용...</p>
+            </div>
+            <div id="finaleOptions" class="grid grid-cols-1 gap-4"></div>
+        </div>
+    </div>
+
+    <!-- 토스트 알림창 -->
+    <div id="toast">메시지</div>
+
+    <script>
+        // --- 의미 단위로 수작업 분리된 50개 속담 데이터 ---
+        const proverbs = [
+            { id: 1, p1: "아 다르고", p2: "어 다르다", full: "아 다르고 어 다르다", meaning: "같은 말이라도 어떻게 하느냐에 따라 듣는 사람의 기분이 달라진다." },
+            { id: 2, p1: "아니 땐 굴뚝에", p2: "연기 날까", full: "아니 땐 굴뚝에 연기 날까", meaning: "원인이 없으면 결과가 생기지 않는다." },
+            { id: 3, p1: "콩 심은 데 콩 나고", p2: "팥 심은 데 팥 난다", full: "콩 심은 데 콩 나고 팥 심은 데 팥 난다", meaning: "모든 일은 원인에 따라 결과가 생긴다." },
+            { id: 4, p1: "구슬이 서 말이라도", p2: "꿰어야 보배다", full: "구슬이 서 말이라도 꿰어야 보배다", meaning: "아무리 좋은 것이라도 가공하거나 활용해야 가치가 있다." },
+            { id: 5, p1: "가는 말이 고와야", p2: "오는 말이 곱다", full: "가는 말이 고와야 오는 말이 곱다", meaning: "내가 남에게 잘해야 남도 나에게 잘한다." },
+            { id: 6, p1: "티끌 모아", p2: "태산", full: "티끌 모아 태산", meaning: "아무리 작은 것이라도 모이면 큰 것이 된다." },
+            { id: 7, p1: "발 없는 말이", p2: "천리 간다", full: "발 없는 말이 천리 간다", meaning: "소문은 순식간에 널리 퍼진다." },
+            { id: 8, p1: "금강산도", p2: "식후경", full: "금강산도 식후경", meaning: "아무리 재미있는 일도 배가 불러야 즐겁다." },
+            { id: 9, p1: "가랑비에", p2: "옷 젖는 줄 모른다", full: "가랑비에 옷 젖는 줄 모른다", meaning: "작은 손해나 쓰임새도 자꾸 쌓이면 크게 된다." },
+            { id: 10, p1: "가는 날이", p2: "장날이다", full: "가는 날이 장날이다", meaning: "뜻밖에 우연히 나쁜 일을 만나다." },
+            { id: 11, p1: "개구리 올챙이 적", p2: "생각 못 한다", full: "개구리 올챙이 적 생각 못 한다", meaning: "형편이 좋아진 뒤에 옛날의 어려웠던 때를 잊어버린다." },
+            { id: 12, p1: "까마귀 날자", p2: "배 떨어진다", full: "까마귀 날자 배 떨어진다", meaning: "아무 관계없이 한 일이 우연히 다른 일과 동시에 일어나 의심을 받는다." },
+            { id: 13, p1: "남의 잔치에", p2: "감 놓아라 배 놓아라 한다", full: "남의 잔치에 감 놓아라 배 놓아라 한다", meaning: "쓸데없이 남의 일에 참견한다." },
+            { id: 14, p1: "낮말은 새가 듣고", p2: "밤말은 쥐가 듣는다", full: "낮말은 새가 듣고 밤말은 쥐가 듣는다", meaning: "아무도 안 듣는 것 같아도 비밀은 새어나가니 말을 조심해야 한다." },
+            { id: 15, p1: "누워서", p2: "떡 먹기", full: "누워서 떡 먹기", meaning: "하기가 아주 쉬운 일." },
+            { id: 16, p1: "누워서", p2: "침 뱉기", full: "누워서 침 뱉기", meaning: "남을 해치려고 한 일이 도리어 자기에게 해가 된다." },
+            { id: 17, p1: "다 된 밥에", p2: "재 뿌린다", full: "다 된 밥에 재 뿌린다", meaning: "거의 다 완성된 일을 망쳐 버린다." },
+            { id: 18, p1: "닭 잡아먹고", p2: "오리발 내민다", full: "닭 잡아먹고 오리발 내민다", meaning: "나쁜 일을 저지르고 엉뚱한 수작으로 속이려 한다." },
+            { id: 19, p1: "도둑이", p2: "제 발 저리다", full: "도둑이 제 발 저리다", meaning: "지은 죄가 있으면 마음이 불안해서 스스로 털어놓게 된다." },
+            { id: 20, p1: "꿩 먹고", p2: "알 먹는다", full: "꿩 먹고 알 먹는다", meaning: "한 가지 일로 두 가지 이상의 이득을 본다." },
+            { id: 21, p1: "돌다리도", p2: "두드려 보고 건너라", full: "돌다리도 두드려 보고 건너라", meaning: "잘 아는 일이라도 신중하게 확인하고 해야 한다." },
+            { id: 22, p1: "등잔 밑이", p2: "어둡다", full: "등잔 밑이 어둡다", meaning: "가까이 있는 것을 오히려 알아채기 어렵다." },
+            { id: 23, p1: "떡 줄 사람은 생각도 않는데", p2: "김칫국부터 마신다", full: "떡 줄 사람은 생각도 않는데 김칫국부터 마신다", meaning: "상대방은 생각지도 않는데 혼자 기대한다." },
+            { id: 24, p1: "똥 묻은 개가", p2: "겨 묻은 개 나무란다", full: "똥 묻은 개가 겨 묻은 개 나무란다", meaning: "자기 허물은 모르고 남의 작은 허물을 탓한다." },
+            { id: 25, p1: "뛰는 놈 위에", p2: "나는 놈 있다", full: "뛰는 놈 위에 나는 놈 있다", meaning: "아무리 재주가 뛰어난 사람이라도 그보다 더 뛰어난 사람이 있다." },
+            { id: 26, p1: "말 한마디에", p2: "천 냥 빚도 갚는다", full: "말 한마디에 천 냥 빚도 갚는다", meaning: "말을 잘하면 어려운 일도 해결할 수 있다." },
+            { id: 27, p1: "믿는 도끼에", p2: "발등 찍힌다", full: "믿는 도끼에 발등 찍힌다", meaning: "믿었던 사람에게 배신을 당하다." },
+            { id: 28, p1: "밑 빠진 독에", p2: "물 붓기", full: "밑 빠진 독에 물 붓기", meaning: "아무리 노력하거나 투자해도 보람이 없는 일." },
+            { id: 29, p1: "바늘 도둑이", p2: "소 도둑 된다", full: "바늘 도둑이 소 도둑 된다", meaning: "작은 나쁜 짓도 자꾸 반복하면 나중에 큰 죄를 짓게 된다." },
+            { id: 30, p1: "백지장도", p2: "맞들면 낫다", full: "백지장도 맞들면 낫다", meaning: "아무리 쉬운 일이라도 서로 힘을 합치면 훨씬 쉽다." },
+            { id: 31, p1: "빈 수레가", p2: "더 요란하다", full: "빈 수레가 더 요란하다", meaning: "지식이나 실속이 없는 사람이 오히려 자랑을 많이 한다." },
+            { id: 32, p1: "사공이 많으면", p2: "배가 산으로 간다", full: "사공이 많으면 배가 산으로 간다", meaning: "주장하는 사람이 많으면 일이 엉뚱한 방향으로 흘러간다." },
+            { id: 33, p1: "서당 개 삼 년이면", p2: "풍월을 읊는다", full: "서당 개 삼 년이면 풍월을 읊는다", meaning: "비록 경험이 없어도 오래 듣고 보면 저절로 지식이 생긴다." },
+            { id: 34, p1: "선무당이", p2: "사람 잡는다", full: "선무당이 사람 잡는다", meaning: "어설픈 지식이나 기술로 일을 하다가 큰 사고를 낸다." },
+            { id: 35, p1: "소 잃고", p2: "외양간 고친다", full: "소 잃고 외양간 고친다", meaning: "이미 일을 그르친 후에 뉘우쳐도 소용이 없다." },
+            { id: 36, p1: "쇠귀에", p2: "경 읽기", full: "쇠귀에 경 읽기", meaning: "아무리 가르쳐 주고 일러 주어도 알아듣지 못한다." },
+            { id: 37, p1: "우물에 가서", p2: "숭늉 찾는다", full: "우물에 가서 숭늉 찾는다", meaning: "성미가 매우 급해서 일의 차례도 모르고 결과를 바란다." },
+            { id: 38, p1: "원숭이도", p2: "나무에서 떨어진다", full: "원숭이도 나무에서 떨어진다", meaning: "아무리 익숙하고 잘하는 사람이라도 실수할 때가 있다." },
+            { id: 39, p1: "자라 보고 놀란 가슴", p2: "솥뚜껑 보고 놀란다", full: "자라 보고 놀란 가슴 솥뚜껑 보고 놀란다", meaning: "어떤 것에 한 번 놀란 사람은 비슷한 것만 봐도 겁을 먹는다." },
+            { id: 40, p1: "재주는 곰이 넘고", p2: "돈은 주인이 받는다", full: "재주는 곰이 넘고 돈은 주인이 받는다", meaning: "수고는 다른 사람이 하고, 이익은 엉뚱한 사람이 챙긴다." },
+            { id: 41, p1: "참새가 방앗간을", p2: "그저 지나랴", full: "참새가 방앗간을 그저 지나랴", meaning: "자기가 좋아하는 곳을 그냥 지나치지 못한다." },
+            { id: 42, p1: "콩으로 메주를 쑨다 해도", p2: "곧이안듣는다", full: "콩으로 메주를 쑨다 해도 곧이안듣는다", meaning: "거짓말을 너무 자주 해서 아무리 사실을 말해도 믿지 않는다." },
+            { id: 43, p1: "하늘이 무너져도", p2: "솟아날 구멍이 있다", full: "하늘이 무너져도 솟아날 구멍이 있다", meaning: "아무리 어려운 상황이라도 헤쳐나갈 방법은 있다." },
+            { id: 44, p1: "하룻강아지", p2: "범 무서운 줄 모른다", full: "하룻강아지 범 무서운 줄 모른다", meaning: "철없이 상대방의 힘을 모르고 무모하게 덤빈다." },
+            { id: 45, p1: "한 번 엎지른 물은", p2: "주워담지 못한다", full: "한 번 엎지른 물은 주워담지 못한다", meaning: "한 번 저지른 일은 다시 원상태로 돌릴 수 없다." },
+            { id: 46, p1: "도토리", p2: "키 재기", full: "도토리 키 재기", meaning: "실력이 비슷비슷하여 비교할 필요가 없다." },
+            { id: 47, p1: "호랑이도 제 말 하면", p2: "온다", full: "호랑이도 제 말 하면 온다", meaning: "마침 어떤 사람에 대해 이야기하는데 그 사람이 나타난다." },
+            { id: 48, p1: "호랑이에게 잡혀가도", p2: "정신만 차리면 산다", full: "호랑이에게 잡혀가도 정신만 차리면 산다", meaning: "아무리 위급한 순간이라도 침착하면 헤쳐나갈 수 있다." },
+            { id: 49, p1: "종로에서 뺨 맞고", p2: "한강에 가서 눈 흘긴다", full: "종로에서 뺨 맞고 한강에 가서 눈 흘긴다", meaning: "욕을 당한 그 자리에서는 아무 말도 못 하고 엉뚱한 곳에 화풀이를 한다." },
+            { id: 50, p1: "울며", p2: "겨자 먹기", full: "울며 겨자 먹기", meaning: "하기 싫은 일을 어쩔 수 없이 억지로 하는 상태." }
+        ];
+
+        // --- 사운드 (Web Audio API) 및 TTS ---
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        
+        function initAudio() {
+            if(!audioCtx) audioCtx = new AudioContext();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        // 음성 로드 초기화 (크롬 등 브라우저 대응)
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
+        }
+
+        // 마우스 호버: 뾱! 뽀롱~
+        function playHoverSound() {
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1400, audioCtx.currentTime + 0.05);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        // 매칭 성공: 띠리링~ 빰빰!
+        function playMatchSound() {
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime + i*0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime + i*0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + i*0.1 + 0.2);
+                osc.start(audioCtx.currentTime + i*0.1);
+                osc.stop(audioCtx.currentTime + i*0.1 + 0.2);
+            });
+        }
+
+        // 틀렸을 때: 띠용~
+        function playMismatchSound() {
+            if(!audioCtx || audioCtx.state === 'suspended') return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        }
+
+        function playSelectSound() {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'sine'; osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+        }
+        
+        function playTick() {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = 'square'; osc.frequency.setValueAtTime(900, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        // TTS 낭독 - 남자 훈장님 톤(한국어 남성 목소리 탐색 후 강제 적용)
+        function speakProverb(fullProverb) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const text = `오호~ 명답이로다! ${fullProverb}`;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR'; 
+                utterance.pitch = 0.5; // 묵직한 톤
+                utterance.rate = 0.85; // 여유로운 속도
+                
+                // 설치된 음성 중 한국어 남성(Male) 목소리를 찾아 지정
+                const voices = window.speechSynthesis.getVoices();
+                const koreanVoices = voices.filter(v => v.lang.includes('ko'));
+                let maleVoice = koreanVoices.find(v => v.name.toLowerCase().includes('male'));
+                
+                if (maleVoice) {
+                    utterance.voice = maleVoice;
+                } else if (koreanVoices.length > 0) {
+                    // 명시적 'Male'이 없다면 보통 두 번째 인덱스나 첫 번째를 사용
+                    utterance.voice = koreanVoices.length > 1 ? koreanVoices[1] : koreanVoices[0];
+                }
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- 상태 변수 ---
+        let userMoney = 1000;
+        let selectedTierStake = 100;
+        let myName = "";
+        let isMultiplayer = false;
+        let peer, conn;
+        let myTurn = true;
+        let isStudying = false; 
+
+        // 카드 덱: 내 패(앞구절), 바닥(뒷구절)
+        let deckHand = [], deckBoard = [];
+        let myHand = [], oppHand = [], board = [];
+        let myScore = 0, oppScore = 0;
+        let selectedHandIndex = null;
+        let usedMagnifier = false, usedFan = false;
+
+        let timerInterval, timeLeft = 20;
+        let studyModalInterval;
+
+        // --- 로비 로직 ---
+        function selectRoomTier(minStake) {
+            initAudio();
+            if(userMoney < minStake) {
+                showToast(`엽전이 부족합니다! (${minStake}냥 이상 필요)`); return;
+            }
+            selectedTierStake = minStake === 10000 ? 2000 : (minStake === 1000 ? 500 : 100);
+            
+            [100, 1000, 10000].forEach((stake, idx) => {
+                const el = document.getElementById(`tier${idx+1}`);
+                if(stake === minStake) {
+                    el.className = "border-4 border-yellow-500 bg-yellow-900/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg relative overflow-hidden";
+                } else {
+                    el.className = "border-2 border-gray-500 bg-gray-800/60 p-4 rounded-2xl cursor-pointer hover:scale-105 transition shadow-lg opacity-60";
+                }
+            });
+            playSelectSound();
+        }
+
+        function goToModeSelect() {
+            initAudio();
+            const input = document.getElementById("playerName").value.trim();
+            if(!input) { alert("이름을 입력하세요!"); return; }
+            myName = input;
+            document.getElementById("myNameDisplay").innerText = myName;
+            document.getElementById("welcomeMsg").innerText = `${myName} 님, 환영합니다!`;
+            document.getElementById("userMoneyDisplay").innerText = userMoney;
+            document.getElementById("lobbyScreen").classList.add("hidden");
+            document.getElementById("modeScreen").classList.remove("hidden");
+            playSelectSound();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg; toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        // --- 멀티플레이 (PeerJS) ---
+        function createRoom() {
+            playSelectSound();
+            const pin = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById("btnCreate").classList.add("hidden");
+            document.getElementById("roomCodeDisplay").classList.remove("hidden");
+            document.getElementById("hostPin").innerText = pin;
+
+            peer = new Peer('sokdam-' + pin);
+            peer.on('connection', (connection) => {
+                conn = connection; setupConnection();
+                isMultiplayer = true; myTurn = true;
+                showToast("친구가 입장했습니다! 게임을 시작합니다.");
+                startGameLogic();
+            });
+        }
+
+        function joinRoom() {
+            playSelectSound();
+            const pin = document.getElementById("joinPin").value.trim();
+            if(pin.length !== 4) { alert("4자리 숫자를 입력하세요!"); return; }
+
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect('sokdam-' + pin);
+                conn.on('open', () => {
+                    setupConnection();
+                    isMultiplayer = true; myTurn = false;
+                    showToast("방 입장 성공! 방장의 시작을 기다립니다.");
+                    document.getElementById("modeScreen").classList.add("hidden");
+                    
+                    // 배경 변경 처리
+                    document.getElementById("mainBody").classList.remove("bg-lobby");
+                    document.getElementById("gameScreen").classList.remove("hidden");
+                });
+            });
+        }
+
+        function setupConnection() {
+            conn.on('data', (data) => {
+                if(data.type === 'SYNC') {
+                    board = data.board; oppHand = data.hostHand; myHand = data.guestHand;
+                    oppScore = data.hostScore; myScore = data.guestScore;
+                    myTurn = data.isGuestTurn; deckHand = data.deckHand; deckBoard = data.deckBoard;
+                    document.getElementById("oppName").innerText = data.hostName;
+                    
+                    if(data.lastMatched) addOppCollection(data.lastMatched);
+                    renderGame(); 
+                    if(myTurn && !isStudying) startTimer();
+                } else if(data.type === 'STUDY_START') {
+                    showToast("상대방이 속담을 확인하고 있습니다...");
+                    clearInterval(timerInterval);
+                } else if(data.type === 'EMOTE') {
+                    playSelectSound(); showToast(`상대방: ${data.msg}`);
+                } else if(data.type === 'POPUP') {
+                    triggerFlashyPopup(data.proverb);
+                }
+            });
+        }
+
+        function syncState(lastMatchedProverb = null) {
+            if(!isMultiplayer || !conn) return;
+            conn.send({
+                type: 'SYNC', hostName: myName, board: board, hostHand: myHand, guestHand: oppHand,
+                hostScore: myScore, guestScore: oppScore, isGuestTurn: !myTurn, 
+                deckHand: deckHand, deckBoard: deckBoard, lastMatched: lastMatchedProverb
+            });
+        }
+
+        function sendEmote(msg) {
+            playSelectSound();
+            if(isMultiplayer && conn) conn.send({ type: 'EMOTE', msg: msg });
+            showToast(`나: ${msg}`);
+        }
+
+        // --- 20초 타이머 ---
+        function startTimer() {
+            clearInterval(timerInterval);
+            const timerBox = document.getElementById("timerBox");
+            const timerText = document.getElementById("timerText");
+            const timerBar = document.getElementById("timerBar");
+
+            if(!myTurn || isStudying) {
+                timerBox.classList.remove("timer-danger");
+                timerText.innerText = "상대 차례..."; timerText.style.color = "#9ca3af";
+                timerBar.style.width = "100%"; timerBar.style.background = "#4b5563";
+                return;
+            }
+
+            timeLeft = 20;
+            timerBox.classList.remove("timer-danger");
+            timerText.style.color = "#facc15"; timerText.innerText = `${timeLeft}초`;
+            timerBar.style.width = "100%"; timerBar.style.background = "linear-gradient(to right, #eab308, #f97316)";
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerText.innerText = `${timeLeft}초`;
+                timerBar.style.width = `${(timeLeft / 20) * 100}%`;
+
+                if(timeLeft <= 5 && timeLeft > 0) {
+                    playTick();
+                    timerBox.classList.add("timer-danger");
+                    timerText.style.color = "#fca5a5"; timerBar.style.background = "#ef4444";
+                }
+
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showToast("시간 초과! 패가 임의로 내어집니다.");
+                    forceRandomPlay();
+                }
+            }, 1000);
+        }
+
+        function forceRandomPlay() {
+            if(myHand.length === 0 || board.length === 0) return;
+            selectedHandIndex = Math.floor(Math.random() * myHand.length);
+            playCard(Math.floor(Math.random() * board.length));
+        }
+
+        // --- 게임 진행 ---
+        function startAIGame() {
+            playSelectSound(); isMultiplayer = false;
+            document.getElementById("oppName").innerText = "조선비 (AI)";
+            startGameLogic();
+        }
+
+        function startGameLogic() {
+            document.getElementById("modeScreen").classList.add("hidden");
+            document.getElementById("mainBody").classList.remove("bg-lobby"); // 로비 배경 제거
+            document.getElementById("gameScreen").classList.remove("hidden");
+
+            deckHand = []; deckBoard = [];
+            proverbs.forEach(p => {
+                deckHand.push({ id: p.id, type: 'p1', text: p.p1, full: p.full, meaning: p.meaning });
+                deckBoard.push({ id: p.id, type: 'p2', text: p.p2, full: p.full, meaning: p.meaning });
+            });
+            deckHand.sort(() => Math.random() - 0.5);
+            deckBoard.sort(() => Math.random() - 0.5);
+
+            // 손패는 무조건 앞구절
+            myHand = deckHand.splice(0, 5); 
+            oppHand = deckHand.splice(0, 5);
+            ensureBoardHasMatch(myTurn ? myHand : oppHand);
+
+            renderGame();
+            if(isMultiplayer && myTurn) syncState();
+            startTimer();
+        }
+
+        // 바닥(뒷구절)에 손패(앞구절) 짝 최소 1개 보장
+        function ensureBoardHasMatch(targetHand) {
+            while(board.length < 8 && deckBoard.length > 0) board.push(deckBoard.pop());
+            if (!targetHand || targetHand.length === 0) return;
+
+            let matchExists = false;
+            for (let hc of targetHand) {
+                for (let bc of board) { if (hc.id === bc.id) { matchExists = true; break; } }
+                if(matchExists) break;
+            }
+
+            if (!matchExists && deckBoard.length > 0 && board.length > 0) {
+                for (let i = 0; i < targetHand.length; i++) {
+                    let hc = targetHand[i];
+                    let deckIdx = deckBoard.findIndex(dc => dc.id === hc.id);
+                    if (deckIdx !== -1) {
+                        let temp = board[0];
+                        board[0] = deckBoard.splice(deckIdx, 1)[0];
+                        deckBoard.push(temp); deckBoard.sort(() => Math.random() - 0.5);
+                        break;
+                    }
+                }
+            }
+        }
+
+        function renderGame() {
+            document.getElementById("myScore").innerText = myScore;
+            document.getElementById("oppScore").innerText = oppScore;
+            document.getElementById("deckCount").innerText = `남은 패: ${deckBoard.length}`;
+
+            // 내 패 (앞구절)
+            const myHandEl = document.getElementById("myHandArea"); myHandEl.innerHTML = "";
+            myHand.forEach((card, idx) => {
+                const isSel = selectedHandIndex === idx ? 'selected' : '';
+                myHandEl.innerHTML += `
+                    <div class="hwatu-card ${isSel}" onclick="selectMyCard(${idx})" onmouseenter="playHoverSound()">
+                        <div class="card-type type-p1">앞구절</div>
+                        <div class="card-text">${card.text}</div>
+                    </div>`;
+            });
+
+            // 상대 패 (뒷면)
+            const oppHandEl = document.getElementById("oppHandArea"); oppHandEl.innerHTML = "";
+            oppHand.forEach(() => { oppHandEl.innerHTML += `<div class="hwatu-card back"></div>`; });
+
+            // 바닥 패 (뒷구절)
+            const boardEl = document.getElementById("boardArea"); boardEl.innerHTML = "";
+            board.forEach((card, idx) => {
+                boardEl.innerHTML += `
+                    <div class="hwatu-card" id="boardCard-${idx}" onclick="playCard(${idx})" onmouseenter="playHoverSound()">
+                        <div class="card-type type-p2">뒷구절</div>
+                        <div class="card-text text-[0.95rem]">${card.text}</div>
+                    </div>`;
+            });
+        }
+
+        function selectMyCard(idx) {
+            if(!myTurn || isStudying) { showToast("차례를 기다리세요!"); return; }
+            playSelectSound();
+            selectedHandIndex = (selectedHandIndex === idx) ? null : idx;
+            renderGame();
+        }
+
+        // 매칭 팝업 4초 유지
+        function triggerFlashyPopup(proverb) {
+            const popup = document.getElementById("flashyMatchPopup");
+            document.getElementById("flashyProverbText").innerText = proverb;
+            popup.classList.add("active");
+            popup.style.opacity = "1";
+            setTimeout(() => {
+                popup.classList.remove("active");
+                popup.style.opacity = "0";
+            }, 4000);
+        }
+
+        function playCard(boardIdx) {
+            if(!myTurn || isStudying) return;
+            if(selectedHandIndex === null) { showToast("먼저 낼 앞구절 패를 고르세요!"); return; }
+
+            clearInterval(timerInterval);
+
+            const handCard = myHand[selectedHandIndex];
+            const boardCard = board[boardIdx];
+
+            if(handCard.id === boardCard.id) {
+                // 성공!
+                playMatchSound();
+                triggerFlashyPopup(handCard.full);
+                if(isMultiplayer && conn) conn.send({ type: 'POPUP', proverb: handCard.full });
+
+                myScore += 10;
+                speakProverb(handCard.full);
+                addMyCollection(handCard.full);
+
+                myHand.splice(selectedHandIndex, 1);
+                board.splice(boardIdx, 1);
+                
+                if(deckHand.length > 0) myHand.push(deckHand.pop());
+                ensureBoardHasMatch(oppHand);
+
+                selectedHandIndex = null;
+                
+                // 팝업 감상 후 학습 모달 열기 (대기 시간 3.8초로 연장)
+                setTimeout(() => {
+                    openStudyModal(handCard, () => {
+                        if(isMultiplayer) {
+                            myTurn = false; syncState(handCard.full); startTimer();
+                        } else {
+                            myTurn = false; renderGame(); startTimer();
+                            setTimeout(playAI, 1500);
+                        }
+                    });
+                }, 3800);
+
+            } else {
+                playMismatchSound();
+                showToast("짝이 맞지 않습니다!");
+                selectedHandIndex = null;
+                renderGame();
+                if(isMultiplayer) { myTurn = false; syncState(); startTimer(); }
+                else { myTurn = false; setTimeout(playAI, 1200); }
+            }
+        }
+
+        function addMyCollection(proverbFull) {
+            const el = document.getElementById("myCollectionArea");
+            if(el.innerHTML.includes("비어있음")) el.innerHTML = "";
+            el.innerHTML += `<div class="bg-green-500/20 p-2 rounded border border-green-500/50 text-green-100 font-bold shadow-sm">✅ ${proverbFull}</div>`;
+        }
+        function addOppCollection(proverbFull) {
+            const el = document.getElementById("oppCollectionArea");
+            if(el.innerHTML.includes("비어있음")) el.innerHTML = "";
+            el.innerHTML += `<div class="bg-pink-500/20 p-2 rounded border border-pink-500/50 text-pink-100 font-bold shadow-sm">🔴 ${proverbFull}</div>`;
+        }
+
+        // --- 아이템 ---
+        function useMagnifierItem() {
+            if(usedMagnifier) { showToast("돋보기는 1회만 사용 가능합니다!"); return; }
+            if(selectedHandIndex === null) { showToast("먼저 내 패를 선택하세요!"); return; }
+
+            const handCard = myHand[selectedHandIndex];
+            let foundIdx = -1;
+            board.forEach((bc, idx) => { if(bc.id === handCard.id) foundIdx = idx; });
+
+            if(foundIdx !== -1) {
+                usedMagnifier = true; playSelectSound();
+                document.getElementById(`btnMagnifier`).classList.add("opacity-40");
+                const targetEl = document.getElementById(`boardCard-${foundIdx}`);
+                targetEl.classList.add("hint-highlight");
+                showToast("🔍 짝이 되는 뒷구절이 반짝입니다!");
+                setTimeout(() => targetEl.classList.remove("hint-highlight"), 3000);
+            } else {
+                showToast("바닥에 짝이 되는 뒷구절이 없습니다!");
+            }
+        }
+
+        function useFanItem() {
+            if(usedFan) { showToast("부채는 1회만 사용 가능합니다!"); return; }
+            usedFan = true; playSelectSound();
+            document.getElementById(`btnFan`).classList.add("opacity-40");
+
+            deckBoard.push(...board);
+            deckBoard.sort(() => Math.random() - 0.5);
+            board = deckBoard.splice(0, 8);
+            ensureBoardHasMatch(myHand); 
+            showToast("🌪️ 바닥 뒷구절 패가 리셋되었습니다!");
+            renderGame();
+        }
+
+        // --- 학습 모달창 ---
+        let onStudyCompleteCallback = null;
+
+        function openStudyModal(card, onComplete) {
+            isStudying = true;
+            if(isMultiplayer && conn) conn.send({ type: 'STUDY_START' });
+
+            document.getElementById("modalProverb").innerText = card.full;
+            document.getElementById("modalMeaning").innerText = card.meaning;
+            document.getElementById("studyModal").classList.remove("hidden");
+
+            onStudyCompleteCallback = onComplete;
+            let count = 10;
+            document.getElementById("modalTimer").innerText = count;
+            clearInterval(studyModalInterval);
+            studyModalInterval = setInterval(() => {
+                count--;
+                document.getElementById("modalTimer").innerText = count;
+                if(count <= 0) closeStudyModal();
+            }, 1000);
+        }
+
+        function closeStudyModal() {
+            playSelectSound();
+            clearInterval(studyModalInterval);
+            document.getElementById("studyModal").classList.add("hidden");
+            isStudying = false;
+            if(onStudyCompleteCallback) {
+                const cb = onStudyCompleteCallback; onStudyCompleteCallback = null; cb(); 
+            }
+        }
+
+        // --- AI ---
+        function playAI() {
+            let matched = false;
+            let matchedCard = null;
+            for(let i=0; i<oppHand.length; i++) {
+                for(let j=0; j<board.length; j++) {
+                    if(oppHand[i].id === board[j].id) {
+                        playMatchSound();
+                        oppScore += 10;
+                        matchedCard = oppHand[i];
+                        
+                        triggerFlashyPopup(matchedCard.full);
+                        speakProverb(matchedCard.full);
+                        addOppCollection(matchedCard.full);
+
+                        oppHand.splice(i, 1); board.splice(j, 1);
+                        if(deckHand.length > 0) oppHand.push(deckHand.pop());
+                        ensureBoardHasMatch(myHand);
+                        matched = true; break;
+                    }
+                }
+                if(matched) break;
+            }
+
+            if(matched) {
+                // AI 매칭 팝업도 3.8초 대기 후 모달 등장
+                setTimeout(() => {
+                    openStudyModal(matchedCard, () => {
+                        if(deckBoard.length === 0 && (myHand.length === 0 || oppHand.length === 0)) {
+                            openFinaleQuiz();
+                        } else {
+                            myTurn = true; renderGame(); startTimer();
+                        }
+                    });
+                }, 3800);
+            } else {
+                showToast("조선비가 짝을 찾지 못했습니다.");
+                playMismatchSound();
+                if(deckBoard.length === 0 && (myHand.length === 0 || oppHand.length === 0)) {
+                    openFinaleQuiz();
+                } else {
+                    myTurn = true; renderGame(); startTimer();
+                }
+            }
+        }
+
+        // --- 피날레 퀴즈 ---
+        function openFinaleQuiz() {
+            clearInterval(timerInterval);
+            document.getElementById("finaleModal").classList.remove("hidden");
+            
+            const q = {
+                question: "지호가 평소에는 공부를 안 하다가, 시험 전날 허둥지둥하고 있습니다. 이 상황에 어울리는 속담은?",
+                options: ["소 잃고 외양간 고친다", "누워서 떡 먹기", "금강산도 식후경"],
+                correct: 0
+            };
+
+            document.getElementById("finaleQuestion").innerText = q.question;
+            const optEl = document.getElementById("finaleOptions"); optEl.innerHTML = "";
+            q.options.forEach((opt, idx) => {
+                optEl.innerHTML += `
+                    <button onclick="answerFinale(${idx === q.correct})" class="bg-yellow-900/50 hover:bg-yellow-800/80 border-2 border-yellow-500 p-4 rounded-xl text-xl font-bold text-yellow-100 shadow-[0_0_15px_rgba(250,204,21,0.4)] transition">
+                        ${idx + 1}. ${opt}
+                    </button>`;
+            });
+        }
+
+        function answerFinale(isCorrect) {
+            document.getElementById("finaleModal").classList.add("hidden");
+            if(isCorrect) {
+                playMatchSound();
+                myScore += 50;
+                alert(`🎓 정답입니다! 보너스 +50점 획득!\n\n🎉 대승리! 엽전 ${selectedTierStake * 2}냥을 획득했습니다!`);
+            } else {
+                playMismatchSound();
+                alert(`아쉽게도 오답입니다!\n\n게임이 끝났습니다.`);
+            }
+            location.reload();
+        }
+    </script>
+</body>
+</html>
