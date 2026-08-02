@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>퓨전 사극 속담 짝패 대전 - 3D 아케이드 에디션</title>
+    <title>속담 대전 - 3D 퓨전 사극 에디션</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PeerJS for Real-time Multiplayer -->
@@ -100,14 +100,14 @@
         }
         .timer-danger { animation: pulse-red 1s infinite; color: #ff9f43 !important; }
 
-        /* 화려한 매칭 팝업 이펙트 (4초 지속으로 연장) */
+        /* 화려한 매칭 팝업 이펙트 최적화 (부드럽게 4초 지속) */
         #flashyMatchPopup { pointer-events: none; }
-        #flashyMatchPopup.active .popup-text { animation: pop-in-out 4s forwards; }
-        @keyframes pop-in-out {
-            0% { transform: scale(0.1); opacity: 0; filter: blur(10px); }
-            10% { transform: scale(1.2); opacity: 1; filter: blur(0px); text-shadow: 0 0 40px #ff9f43, 0 0 80px #f368e0; }
+        #flashyMatchPopup.active .popup-text { animation: smooth-pop 4s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+        @keyframes smooth-pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            10% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 40px #ff9f43, 0 0 80px #f368e0; }
             85% { transform: scale(1); opacity: 1; text-shadow: 0 0 20px #ff9f43; }
-            100% { transform: scale(1.5); opacity: 0; filter: blur(5px); }
+            100% { transform: scale(1.2); opacity: 0; }
         }
 
         #toast {
@@ -125,7 +125,7 @@
     <!-- 1. 로비 화면 -->
     <div id="lobbyScreen" class="absolute inset-0 flex flex-col items-center justify-center z-40">
         <div class="bg-black/60 backdrop-blur-md p-10 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)] text-center max-w-md w-full border-2 border-yellow-400/50">
-            <!-- 제목 변경: 📜 속담 대전 -->
+            <!-- 제목: 📜 속담 대전 -->
             <h1 class="text-4xl sm:text-5xl whitespace-nowrap text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 mb-5 font-bold drop-shadow-lg">📜 속담 대전</h1>
             <p class="text-gray-200 mb-6 text-lg font-bold">서당에 입장하기 전, 이름(닉네임)을 적어주세요.</p>
             <input type="text" id="playerName" placeholder="이름을 입력하세요" class="w-full p-4 border-2 border-yellow-400/50 rounded-xl mb-6 text-center text-2xl font-bold focus:outline-none focus:border-yellow-300 bg-black/50 text-white placeholder-gray-400 transition" maxlength="8">
@@ -285,7 +285,7 @@
         </div>
     </div>
 
-    <!-- 화려한 매칭 팝업 (해파리 폭발 뷰) -->
+    <!-- 화려한 매칭 팝업 -->
     <div id="flashyMatchPopup" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 transition-opacity duration-300">
         <div class="popup-text text-center">
             <div class="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-pink-400 to-purple-500 drop-shadow-[0_0_30px_rgba(255,255,255,1)]">✨ 속담 완성! ✨</div>
@@ -326,8 +326,8 @@
     <div id="toast">메시지</div>
 
     <script>
-        // --- 의미 단위로 수작업 분리된 50개 속담 데이터 ---
-        const proverbs = [
+        // --- 의미 단위로 수작업 분리된 50개 속담 데이터 (전체 풀) ---
+        const proverbsAll = [
             { id: 1, p1: "아 다르고", p2: "어 다르다", full: "아 다르고 어 다르다", meaning: "같은 말이라도 어떻게 하느냐에 따라 듣는 사람의 기분이 달라진다." },
             { id: 2, p1: "아니 땐 굴뚝에", p2: "연기 날까", full: "아니 땐 굴뚝에 연기 날까", meaning: "원인이 없으면 결과가 생기지 않는다." },
             { id: 3, p1: "콩 심은 데 콩 나고", p2: "팥 심은 데 팥 난다", full: "콩 심은 데 콩 나고 팥 심은 데 팥 난다", meaning: "모든 일은 원인에 따라 결과가 생긴다." },
@@ -389,12 +389,10 @@
             if(audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        // 음성 로드 초기화 (크롬 등 브라우저 대응)
         if ('speechSynthesis' in window) {
             window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
         }
 
-        // 마우스 호버: 뾱! 뽀롱~
         function playHoverSound() {
             if(!audioCtx || audioCtx.state === 'suspended') return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -407,10 +405,9 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.05);
         }
 
-        // 매칭 성공: 띠리링~ 빰빰!
         function playMatchSound() {
             if(!audioCtx || audioCtx.state === 'suspended') return;
-            const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+            const notes = [523.25, 659.25, 783.99, 1046.50]; 
             notes.forEach((freq, i) => {
                 const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
                 osc.connect(gain); gain.connect(audioCtx.destination);
@@ -423,7 +420,6 @@
             });
         }
 
-        // 틀렸을 때: 띠용~
         function playMismatchSound() {
             if(!audioCtx || audioCtx.state === 'suspended') return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -455,17 +451,20 @@
             osc.start(); osc.stop(audioCtx.currentTime + 0.05);
         }
 
-        // TTS 낭독 - 남자 훈장님 톤(한국어 남성 목소리 탐색 후 강제 적용)
+        // TTS 낭독 - 문장부호 제거 및 남자 훈장님 톤 적용
         function speakProverb(fullProverb) {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                const text = `오호~ 명답이로다! ${fullProverb}`;
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ko-KR'; 
-                utterance.pitch = 0.5; // 묵직한 톤
-                utterance.rate = 0.85; // 여유로운 속도
                 
-                // 설치된 음성 중 한국어 남성(Male) 목소리를 찾아 지정
+                // 특수기호 등 문장부호 제거 (TTS가 부호를 그대로 읽지 못하도록 방지)
+                const rawText = `오호 명답이로다 ${fullProverb}`;
+                const cleanText = rawText.replace(/[^가-힣a-zA-Z0-9\s]/g, '');
+
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'ko-KR'; 
+                utterance.pitch = 0.5; 
+                utterance.rate = 0.85; 
+                
                 const voices = window.speechSynthesis.getVoices();
                 const koreanVoices = voices.filter(v => v.lang.includes('ko'));
                 let maleVoice = koreanVoices.find(v => v.name.toLowerCase().includes('male'));
@@ -473,7 +472,6 @@
                 if (maleVoice) {
                     utterance.voice = maleVoice;
                 } else if (koreanVoices.length > 0) {
-                    // 명시적 'Male'이 없다면 보통 두 번째 인덱스나 첫 번째를 사용
                     utterance.voice = koreanVoices.length > 1 ? koreanVoices[1] : koreanVoices[0];
                 }
 
@@ -490,7 +488,7 @@
         let myTurn = true;
         let isStudying = false; 
 
-        // 카드 덱: 내 패(앞구절), 바닥(뒷구절)
+        // 카드 덱: 매 판마다 20개만 랜덤 추출하여 사용
         let deckHand = [], deckBoard = [];
         let myHand = [], oppHand = [], board = [];
         let myScore = 0, oppScore = 0;
@@ -569,7 +567,6 @@
                     showToast("방 입장 성공! 방장의 시작을 기다립니다.");
                     document.getElementById("modeScreen").classList.add("hidden");
                     
-                    // 배경 변경 처리
                     document.getElementById("mainBody").classList.remove("bg-lobby");
                     document.getElementById("gameScreen").classList.remove("hidden");
                 });
@@ -666,18 +663,22 @@
 
         function startGameLogic() {
             document.getElementById("modeScreen").classList.add("hidden");
-            document.getElementById("mainBody").classList.remove("bg-lobby"); // 로비 배경 제거
+            document.getElementById("mainBody").classList.remove("bg-lobby");
             document.getElementById("gameScreen").classList.remove("hidden");
 
             deckHand = []; deckBoard = [];
-            proverbs.forEach(p => {
+            
+            // 50개의 속담 중 20개만 랜덤 추출
+            const gameProverbs = [...proverbsAll].sort(() => Math.random() - 0.5).slice(0, 20);
+
+            gameProverbs.forEach(p => {
                 deckHand.push({ id: p.id, type: 'p1', text: p.p1, full: p.full, meaning: p.meaning });
                 deckBoard.push({ id: p.id, type: 'p2', text: p.p2, full: p.full, meaning: p.meaning });
             });
+            
             deckHand.sort(() => Math.random() - 0.5);
             deckBoard.sort(() => Math.random() - 0.5);
 
-            // 손패는 무조건 앞구절
             myHand = deckHand.splice(0, 5); 
             oppHand = deckHand.splice(0, 5);
             ensureBoardHasMatch(myTurn ? myHand : oppHand);
@@ -687,7 +688,6 @@
             startTimer();
         }
 
-        // 바닥(뒷구절)에 손패(앞구절) 짝 최소 1개 보장
         function ensureBoardHasMatch(targetHand) {
             while(board.length < 8 && deckBoard.length > 0) board.push(deckBoard.pop());
             if (!targetHand || targetHand.length === 0) return;
@@ -717,7 +717,6 @@
             document.getElementById("oppScore").innerText = oppScore;
             document.getElementById("deckCount").innerText = `남은 패: ${deckBoard.length}`;
 
-            // 내 패 (앞구절)
             const myHandEl = document.getElementById("myHandArea"); myHandEl.innerHTML = "";
             myHand.forEach((card, idx) => {
                 const isSel = selectedHandIndex === idx ? 'selected' : '';
@@ -728,11 +727,9 @@
                     </div>`;
             });
 
-            // 상대 패 (뒷면)
             const oppHandEl = document.getElementById("oppHandArea"); oppHandEl.innerHTML = "";
             oppHand.forEach(() => { oppHandEl.innerHTML += `<div class="hwatu-card back"></div>`; });
 
-            // 바닥 패 (뒷구절)
             const boardEl = document.getElementById("boardArea"); boardEl.innerHTML = "";
             board.forEach((card, idx) => {
                 boardEl.innerHTML += `
@@ -750,7 +747,6 @@
             renderGame();
         }
 
-        // 매칭 팝업 4초 유지
         function triggerFlashyPopup(proverb) {
             const popup = document.getElementById("flashyMatchPopup");
             document.getElementById("flashyProverbText").innerText = proverb;
@@ -772,7 +768,6 @@
             const boardCard = board[boardIdx];
 
             if(handCard.id === boardCard.id) {
-                // 성공!
                 playMatchSound();
                 triggerFlashyPopup(handCard.full);
                 if(isMultiplayer && conn) conn.send({ type: 'POPUP', proverb: handCard.full });
@@ -789,7 +784,6 @@
 
                 selectedHandIndex = null;
                 
-                // 팝업 감상 후 학습 모달 열기 (대기 시간 3.8초로 연장)
                 setTimeout(() => {
                     openStudyModal(handCard, () => {
                         if(isMultiplayer) {
@@ -913,7 +907,6 @@
             }
 
             if(matched) {
-                // AI 매칭 팝업도 3.8초 대기 후 모달 등장
                 setTimeout(() => {
                     openStudyModal(matchedCard, () => {
                         if(deckBoard.length === 0 && (myHand.length === 0 || oppHand.length === 0)) {
